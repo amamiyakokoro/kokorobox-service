@@ -1,38 +1,38 @@
 # sparkle-service
 
-這是 [xishang0128/sparkle-service](https://github.com/xishang0128/sparkle-service) 的 fork，供 KokoroBox 使用。
+This is a fork of [xishang0128/sparkle-service](https://github.com/xishang0128/sparkle-service) maintained for KokoroBox.
 
-本服務以 Go 編寫，負責代理核心程序、系統代理及 DNS 設定，並透過 Unix Socket（Linux/macOS）或具名管道（Windows）提供本機 HTTP API。
+Written in Go, this system service manages the proxy core process, system proxy settings, and DNS configuration. It exposes a local HTTP API over a Unix socket on Linux and macOS or a named pipe on Windows.
 
-## Fork 新增內容
+## Fork-specific features
 
-- 在 Windows x64 上啟動並監管 KokoroBox Process Router。
-- Mihomo 無法使用時，將已啟用的 Proxy 規則切換為 Block，避免意外直連。
-- 驗證並持久化 Process Router 規則，支援狀態查詢、停止及清理 API。
-- 透過客戶端租約回收異常離線後殘留的 Router 與 WinDivert 資源。
+- Starts and supervises the KokoroBox Process Router on Windows x64.
+- Changes enabled Proxy rules to Block when Mihomo is unavailable, preventing unintended direct connections.
+- Validates and persists Process Router rules, with APIs for status, shutdown, and cleanup.
+- Uses a client lease to release Router and WinDivert resources after an abnormal client exit.
 
-Process Router 原生元件須放在 `sparkle-service.exe` 旁的 `process-router` 目錄。這項整合目前僅支援 Windows 10/11 x64。
+The native Process Router components must be placed in the `process-router` directory next to `sparkle-service.exe`. This integration currently supports Windows 10/11 x64 only.
 
-## 建置與測試
+## Build and test
 
-需要 Go 1.26 或更新版本。
+Go 1.26 or later is required.
 
 ```bash
 go build -o sparkle-service .
 go test ./...
 ```
 
-安裝為系統服務（Windows 需使用系統管理員權限；Linux/macOS 需使用 root 權限）：
+Install the system service with administrator privileges on Windows or root privileges on Linux and macOS:
 
 ```bash
 sparkle-service service install
 ```
 
-## 文件
+## Documentation
 
-- [上游專案](https://github.com/xishang0128/sparkle-service)
-- [原始完整 README](README.original.md)
+- [Upstream project](https://github.com/xishang0128/sparkle-service)
+- [Archived full README](README.original.md)
 
-## 授權
+## License
 
-授權條款請見 [LICENSE](LICENSE)。
+See [LICENSE](LICENSE) for licensing information.
