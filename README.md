@@ -10,6 +10,7 @@ sparkle-service 是 [Sparkle](https://github.com/xishang0128/sparkle) 的后台�
 - **系统服务管理**：将自身注册为系统服务（支持 Windows、Linux、macOS），并提供安装、卸载、启停控制
 - **身份验证**：基于 Ed25519 公钥签名的请求认证，支持授权主体绑定，保障 API 安全
 - **事件推送**：通过 SSE（Server-Sent Events）实时推送核心进程状态变更和系统代理状态变更事件
+- **应用分流监管**：在 Windows x64 上受控启动 KokoroBox Process Router，并在 Mihomo 不可用时将 Proxy 规则切换为 Block
 
 ## 平台支持
 
@@ -191,6 +192,46 @@ GET /ping
 | ------ | ------------------ | -------------- |
 | POST   | `/service/stop`    | 停止服务       |
 | POST   | `/service/restart` | 重启服务       |
+
+### 应用分流 `/process-router`
+
+应用分流仅支持 Windows 10/11 x64。原生组件必须位于 service 可执行文件旁的
+`process-router` 目录，service 不接受调用方提供的程序路径或命令行参数。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `PUT` | `/process-router/rules` | 验证并原子替换规则 |
+| `POST` | `/process-router/start` | 启动并监管原生 router |
+| `GET` | `/process-router/status` | 查询运行、阻断及 Mihomo 状态 |
+| `POST` | `/process-router/stop` | 停止 router，但保留规则 |
+| `POST` | `/process-router/cleanup` | 停止 router 并删除持久化规则 |
+
+规则请求固定使用本机 `127.0.0.1:7891`，并且必须开启 fail-closed：
+
+```json
+{
+  "version": 1,
+  "proxy_port": 7891,
+  "fail_closed": true,
+  "rules": [
+    {
+      "id": "discord",
+      "executable_path": "C:\\Program Files\\Discord\\Discord.exe",
+      "executable_name": "Discord.exe",
+      "protocol": "both",
+      "action": "proxy",
+      "enabled": true,
+      "priority": 1
+    }
+  ]
+}
+```
+
+Service 每三秒检查一次专用 SOCKS listener。Mihomo 不可用时，所有启用的
+`proxy` 规则会以 `block` 动作发送给原生 router，不会降级为直连。配置保存在
+`<配置目录>/sparkle/process-router/config.json`，并由 service 原子写入。客户端必须
+通过状态请求维持短期租约；客户端异常退出且租约逾期后，service 会停止 router
+并释放 WinDivert，但保留规则供下次启动恢复。
 
 ## 身份验证
 

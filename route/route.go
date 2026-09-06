@@ -4,6 +4,7 @@ import (
 	"github.com/UruhaLushia/sparkle-service/route/auth"
 	"github.com/UruhaLushia/sparkle-service/route/coreapi"
 	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	"github.com/UruhaLushia/sparkle-service/route/processrouterapi"
 	"github.com/UruhaLushia/sparkle-service/route/serviceapi"
 	"github.com/UruhaLushia/sparkle-service/route/sysapi"
 	"github.com/UruhaLushia/sparkle-service/route/sysproxyapi"
@@ -32,6 +33,7 @@ func router() *chi.Mux {
 		r.Mount("/service", serviceapi.Router())
 		r.Mount("/sysproxy", sysproxyapi.Router())
 		r.Mount("/core", coreapi.Router())
+		r.Mount("/process-router", processrouterapi.Router())
 		r.Mount("/sys", sysapi.Router())
 	})
 	return r

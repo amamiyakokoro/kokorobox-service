@@ -5,6 +5,11 @@ on:
       version:
         description: "Tag version to release"
         required: true
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - ".github/ISSUE_TEMPLATE/**"
   push:
     paths-ignore:
       - "docs/**"
@@ -16,7 +21,22 @@ on:
       - "v*"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+      with:
+        go-download-base-url: 'https://github.com/MetaCubeX/go/releases/download/build'
+        go-version: '1.26'
+
+    - name: Test
+      run: go test ./...
+
   build:
+    needs: [test]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -77,6 +97,7 @@ jobs:
           sparkle-service-${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}*
 
   pre-release:
+    if: github.event_name != 'pull_request'
     needs: [build]
     runs-on: ubuntu-latest
     steps:

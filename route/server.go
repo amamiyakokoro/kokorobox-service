@@ -8,6 +8,7 @@ import (
 	"github.com/UruhaLushia/sparkle-service/route/auth"
 	"github.com/UruhaLushia/sparkle-service/route/coreapi"
 	"github.com/UruhaLushia/sparkle-service/route/pipectx"
+	"github.com/UruhaLushia/sparkle-service/route/processrouterapi"
 	"github.com/UruhaLushia/sparkle-service/route/sysproxyapi"
 	"net"
 	"net/http"
@@ -80,6 +81,9 @@ func Start(addr string) error {
 func Stop() error {
 	var errs []error
 	sysproxyapi.StopGuard()
+	if err := processrouterapi.Stop(); err != nil {
+		errs = append(errs, fmt.Errorf("停止应用分流失败：%w", err))
+	}
 	if err := coreapi.Stop(); err != nil {
 		errs = append(errs, fmt.Errorf("停止核心失败：%w", err))
 	}
