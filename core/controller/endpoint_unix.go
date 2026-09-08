@@ -9,7 +9,7 @@ import (
 )
 
 func CreatePrivateEndpoint() (string, string, func(), error) {
-	dir, err := os.MkdirTemp("", "sparkle-mihomo-controller-*")
+	dir, err := os.MkdirTemp("", "kokorobox-mihomo-controller-*")
 	if err != nil {
 		return "", "", nil, fmt.Errorf("创建核心控制器目录失败：%w", err)
 	}

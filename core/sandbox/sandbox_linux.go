@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const sandboxRootPrefix = "sparkle-core-sandbox-"
+const sandboxRootPrefix = "kokorobox-core-sandbox-"
 
 type configError struct {
 	err error

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const startupNotifyDirPrefix = "sparkle-core-notify-"
+const startupNotifyDirPrefix = "kokorobox-core-notify-"
 
 func createNativeStartupHook(token string) (*coreStartupHook, error) {
 	cleanupStaleStartupNotifyDirs()
