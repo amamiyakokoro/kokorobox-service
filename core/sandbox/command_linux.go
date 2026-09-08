@@ -13,8 +13,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
 const (
