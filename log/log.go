@@ -78,11 +78,11 @@ func marshalJSON(value any, pretty bool) ([]byte, error) {
 }
 
 func currentLogPath() string {
-	return filepath.Join(os.TempDir(), "sparkle-service.log")
+	return filepath.Join(os.TempDir(), "kokorobox-service.log")
 }
 
 func previousLogPath() string {
-	return filepath.Join(os.TempDir(), "sparkle-service.previous.log")
+	return filepath.Join(os.TempDir(), "kokorobox-service.previous.log")
 }
 
 func rotateLogFiles() error {

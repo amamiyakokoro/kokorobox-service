@@ -4,6 +4,7 @@ import (
 	"errors"
 	"runtime"
 
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +22,8 @@ var (
 )
 
 var MainCmd = &cobra.Command{
-	Use:           "sparkle-service",
-	Short:         "Sparkle Service",
+	Use:           identity.ServiceExecutable,
+	Short:         identity.ServiceDisplayName,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
@@ -50,9 +51,9 @@ func IsReportedError(err error) bool {
 
 func init() {
 	if runtime.GOOS == "windows" {
-		defaultAddr = "\\\\.\\pipe\\sparkle\\service"
+		defaultAddr = identity.WindowsServicePipe
 	} else {
-		defaultAddr = "/tmp/sparkle-service.sock"
+		defaultAddr = identity.UnixServiceSocket
 	}
 
 	MainCmd.AddCommand(sysproxyCmd)

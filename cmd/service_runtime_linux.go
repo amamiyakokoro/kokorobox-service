@@ -40,7 +40,7 @@ func stageServiceExecutable(source string) (string, error) {
 		return "", err
 	}
 
-	dir := filepath.Join("/run", "sparkle", "service", hash)
+	dir := filepath.Join("/run", "kokorobox", "service", hash)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("创建服务运行目录失败：%w", err)
 	}
@@ -52,7 +52,7 @@ func stageServiceExecutable(source string) (string, error) {
 		return "", fmt.Errorf("检查服务运行副本失败：%w", err)
 	}
 
-	tmp, err := os.CreateTemp(dir, ".sparkle-service-*")
+	tmp, err := os.CreateTemp(dir, ".kokorobox-service-*")
 	if err != nil {
 		return "", fmt.Errorf("创建服务运行副本失败：%w", err)
 	}

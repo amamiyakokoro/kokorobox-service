@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 	kservice "github.com/kardianos/service"
 )
 
@@ -90,9 +91,9 @@ func newConfig(executablePath string) *kservice.Config {
 	options["RunAtLoadOnMac"] = true
 
 	return &kservice.Config{
-		Name:         "SparkleService",
-		DisplayName:  "Sparkle Service",
-		Description:  "Sparkle 提权服务",
+		Name:         identity.ServiceName,
+		DisplayName:  identity.ServiceDisplayName,
+		Description:  identity.ServiceDescription,
 		Executable:   executablePath,
 		Arguments:    []string{"service", "run"},
 		Dependencies: depends,
@@ -103,7 +104,7 @@ func newConfig(executablePath string) *kservice.Config {
 var sysvScript = `#!/bin/sh /etc/rc.common
 DESCRIPTION="{{.Description}}"
 cmd="{{.Path}}"
-name="SparkleService"
+name="KokoroBoxService"
 pid_file="/var/run/$name.pid"
 
 start() {

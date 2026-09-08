@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
 const (
@@ -56,7 +58,7 @@ func NewManager(binaryDir, configDir string) *Manager {
 func NewDefaultManager() *Manager {
 	executable, _ := os.Executable()
 	binaryDir := filepath.Join(filepath.Dir(executable), "process-router")
-	configRoot := os.Getenv("SPARKLE_CONFIG_DIR")
+	configRoot := identity.ConfigDirectoryOverride()
 	if configRoot == "" {
 		if runtime.GOOS == "windows" {
 			configRoot = `C:\ProgramData`
@@ -64,7 +66,7 @@ func NewDefaultManager() *Manager {
 			configRoot = os.TempDir()
 		}
 	}
-	return NewManager(binaryDir, filepath.Join(configRoot, "sparkle", "process-router"))
+	return NewManager(binaryDir, filepath.Join(configRoot, identity.ConfigDirectoryName, "process-router"))
 }
 
 func (m *Manager) Restore() error {

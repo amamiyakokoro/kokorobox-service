@@ -22,7 +22,8 @@ var (
 		"kokorobox.exe":                true,
 		"mihomo.exe":                   true,
 		"mihomo-alpha.exe":             true,
-		"sparkle-service.exe":          true,
+		"kokorobox-service.exe":        true,
+		"sparkle-service.exe":          true, // upgrade compatibility
 		"kokorobox-process-router.exe": true,
 		"crashpad_handler.exe":         true,
 		"elevate.exe":                  true,

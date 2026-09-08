@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
 	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
@@ -31,7 +32,7 @@ var (
 )
 
 func GetConfigDir() string {
-	if dir := os.Getenv("SPARKLE_CONFIG_DIR"); dir != "" {
+	if dir := identity.ConfigDirectoryOverride(); dir != "" {
 		return dir
 	}
 
@@ -48,7 +49,7 @@ func GetConfigDir() string {
 func Start(addr string) error {
 	userDataDir := GetConfigDir()
 
-	keyDir := filepath.Join(userDataDir, "sparkle", "keys")
+	keyDir := filepath.Join(userDataDir, identity.ConfigDirectoryName, "keys")
 
 	if err := auth.InitKeyManager(keyDir); err != nil {
 		log.Printf("警告: 初始化密钥管理器失败: %v", err)

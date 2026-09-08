@@ -12,7 +12,7 @@ import (
 )
 
 func createNativeStartupHook(token string) (*coreStartupHook, error) {
-	pipePath := `\\.\pipe\sparkle\core-notify-` + token
+	pipePath := `\\.\pipe\kokorobox\core-notify-` + token
 	listener, err := listen.ListenNamedPipe(pipePath, currentProcessPipeSDDL())
 	if err != nil {
 		return nil, fmt.Errorf("创建核心启动通知管道失败：%w", err)

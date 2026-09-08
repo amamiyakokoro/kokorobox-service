@@ -14,7 +14,7 @@ import (
 	"net/http/httputil"
 )
 
-const trafficMonitorPipeAddress = `\\.\pipe\Sparkle\mihomo`
+const trafficMonitorPipeAddress = `\\.\pipe\KokoroBox\mihomo`
 
 func startTrafficMonitorProxy(launch *launchSession, sddl string) (func(), error) {
 	if launch == nil || launch.controllerNet != "pipe" || launch.controllerAddr == "" {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/route"
 	appservice "github.com/amamiyakokoro/kokorobox-service/service"
@@ -111,7 +112,7 @@ func serviceStatusMessage(state string) string {
 
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "安装 Sparkle 服务",
+	Short: "安装 KokoroBox 服务",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -136,7 +137,7 @@ var serviceInstallCmd = &cobra.Command{
 
 var serviceUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "卸载 Sparkle 服务",
+	Short: "卸载 KokoroBox 服务",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -160,7 +161,7 @@ var serviceUninstallCmd = &cobra.Command{
 
 var serviceStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: "启动 Sparkle 服务",
+	Short: "启动 KokoroBox 服务",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -181,7 +182,7 @@ var serviceStartCmd = &cobra.Command{
 
 var serviceStopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "停止 Sparkle 服务",
+	Short: "停止 KokoroBox 服务",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -202,7 +203,7 @@ var serviceStopCmd = &cobra.Command{
 
 var serviceRestartCmd = &cobra.Command{
 	Use:   "restart",
-	Short: "重启 Sparkle 服务",
+	Short: "重启 KokoroBox 服务",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -223,7 +224,7 @@ var serviceRestartCmd = &cobra.Command{
 
 var serviceStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "查看 Sparkle 服务状态",
+	Short: "查看 KokoroBox 服务状态",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -247,7 +248,7 @@ var serviceStatusCmd = &cobra.Command{
 
 var serviceRunCmd = &cobra.Command{
 	Use:   "run",
-	Short: "运行 Sparkle 服务",
+	Short: "运行 KokoroBox 服务",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ensureServiceRuntimeExecutable(); err != nil {
 			log.Fatal(err)
@@ -271,7 +272,7 @@ var serviceRunCmd = &cobra.Command{
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "管理 Sparkle 服务",
+	Short: "管理 KokoroBox 服务",
 }
 
 var serviceInitCmd = &cobra.Command{
@@ -288,7 +289,7 @@ var serviceInitCmd = &cobra.Command{
 			return outputServiceCommandError("init", "错误：必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份", errors.New("必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份"))
 		}
 		userDataDir := route.GetConfigDir()
-		keyDir := filepath.Join(userDataDir, "sparkle", "keys")
+		keyDir := filepath.Join(userDataDir, identity.ConfigDirectoryName, "keys")
 
 		_ = route.InitKeyManager(keyDir)
 
@@ -341,7 +342,7 @@ var serviceInitCmd = &cobra.Command{
 			}
 			log.S().Infow("正在重启服务...", "status", serviceCommandStatus{Action: "restart", State: state, Success: true})
 			if err := s.Restart(); err != nil {
-				return outputServiceCommandError("restart", "重启服务失败；请手动执行 'sparkle-service service restart' 命令", err)
+				return outputServiceCommandError("restart", "重启服务失败；请手动执行 'kokorobox-service service restart' 命令", err)
 			}
 			return outputServiceCommandResult("服务已成功重启", serviceCommandStatus{Action: "restart", State: "running"})
 		}

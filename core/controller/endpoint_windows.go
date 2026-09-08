@@ -17,7 +17,7 @@ func CreatePrivateEndpoint() (string, string, func(), error) {
 	if err != nil {
 		return "", "", nil, err
 	}
-	return "pipe", `\\.\pipe\sparkle\mihomo-core-` + token, nil, nil
+	return "pipe", `\\.\pipe\kokorobox\mihomo-core-` + token, nil, nil
 }
 
 func HardenEndpoint(network string, address string) error {

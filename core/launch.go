@@ -15,6 +15,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/core/controller"
 	"github.com/amamiyakokoro/kokorobox-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
 type LaunchProfile struct {
@@ -627,11 +628,11 @@ func lookupEnvMap(envMap map[string]string, key string) (string, bool) {
 }
 
 func launchProfilePath() string {
-	return filepath.Join(serviceConfigDir(), "sparkle", "core", "launch_profile.json")
+	return filepath.Join(serviceConfigDir(), identity.ConfigDirectoryName, "core", "launch_profile.json")
 }
 
 func serviceConfigDir() string {
-	if dir := os.Getenv("SPARKLE_CONFIG_DIR"); dir != "" {
+	if dir := identity.ConfigDirectoryOverride(); dir != "" {
 		return dir
 	}
 
