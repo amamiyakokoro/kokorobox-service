@@ -4,11 +4,15 @@ package core
 
 import (
 	"log"
-	"os"
 	"strings"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
-const disableLinuxSandboxEnv = "SPARKLE_CORE_DISABLE_LINUX_SANDBOX"
+const (
+	disableLinuxSandboxEnv       = "KOKOROBOX_CORE_DISABLE_LINUX_SANDBOX"
+	legacyDisableLinuxSandboxEnv = "SPARKLE_CORE_DISABLE_LINUX_SANDBOX"
+)
 
 func newCoreLauncher(launch *launchSession) coreLauncher {
 	if sandboxDisabled() {
@@ -36,6 +40,6 @@ func newCoreLauncher(launch *launchSession) coreLauncher {
 }
 
 func sandboxDisabled() bool {
-	value := strings.TrimSpace(os.Getenv(disableLinuxSandboxEnv))
+	value := strings.TrimSpace(identity.Environment(disableLinuxSandboxEnv, legacyDisableLinuxSandboxEnv))
 	return value == "1" || strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
 }

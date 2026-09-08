@@ -30,6 +30,15 @@ func ConfigDirectoryOverride() string {
 	return os.Getenv(LegacyConfigDirectoryEnv)
 }
 
+// Environment returns the current environment value first and the legacy one
+// only when the current variable is not configured.
+func Environment(currentName, legacyName string) string {
+	if value := os.Getenv(currentName); value != "" {
+		return value
+	}
+	return os.Getenv(legacyName)
+}
+
 // DataDirectory returns the current service data directory.  During an
 // upgrade it atomically moves the complete legacy directory only when the
 // current directory does not already exist, so an existing KokoroBox install

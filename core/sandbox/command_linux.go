@@ -13,9 +13,14 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
-const reexecModeEnv = "SPARKLE_CORE_SANDBOX_REEXEC"
+const (
+	reexecModeEnv       = "KOKOROBOX_CORE_SANDBOX_REEXEC"
+	legacyReexecModeEnv = "SPARKLE_CORE_SANDBOX_REEXEC"
+)
 
 type reexecConfig struct {
 	Root   string `json:"root"`
@@ -188,7 +193,7 @@ func reexecEnvironment() []string {
 	env := make([]string, 0, len(os.Environ())+1)
 	for _, item := range os.Environ() {
 		key, _, _ := strings.Cut(item, "=")
-		if key != reexecModeEnv {
+		if key != reexecModeEnv && key != legacyReexecModeEnv {
 			env = append(env, item)
 		}
 	}

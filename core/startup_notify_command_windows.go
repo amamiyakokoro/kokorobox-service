@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const startupNotifyExecutableEnv = "SPARKLE_CORE_STARTUP_NOTIFY_EXECUTABLE"
+const startupNotifyExecutableEnv = "KOKOROBOX_CORE_STARTUP_NOTIFY_EXECUTABLE"
 
 func startupNotifyCommand() (string, string, error) {
 	executable, err := os.Executable()

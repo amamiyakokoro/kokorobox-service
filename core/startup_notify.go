@@ -7,23 +7,29 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
 const (
-	startupNotifyModeEnv    = "SPARKLE_CORE_STARTUP_NOTIFY"
-	startupNotifyNetworkEnv = "SPARKLE_CORE_STARTUP_NOTIFY_NETWORK"
-	startupNotifyAddressEnv = "SPARKLE_CORE_STARTUP_NOTIFY_ADDRESS"
-	startupNotifyTokenEnv   = "SPARKLE_CORE_STARTUP_NOTIFY_TOKEN"
+	startupNotifyModeEnv          = "KOKOROBOX_CORE_STARTUP_NOTIFY"
+	startupNotifyNetworkEnv       = "KOKOROBOX_CORE_STARTUP_NOTIFY_NETWORK"
+	startupNotifyAddressEnv       = "KOKOROBOX_CORE_STARTUP_NOTIFY_ADDRESS"
+	startupNotifyTokenEnv         = "KOKOROBOX_CORE_STARTUP_NOTIFY_TOKEN"
+	legacyStartupNotifyModeEnv    = "SPARKLE_CORE_STARTUP_NOTIFY"
+	legacyStartupNotifyNetworkEnv = "SPARKLE_CORE_STARTUP_NOTIFY_NETWORK"
+	legacyStartupNotifyAddressEnv = "SPARKLE_CORE_STARTUP_NOTIFY_ADDRESS"
+	legacyStartupNotifyTokenEnv   = "SPARKLE_CORE_STARTUP_NOTIFY_TOKEN"
 )
 
 func init() {
-	if os.Getenv(startupNotifyModeEnv) != "1" {
+	if identity.Environment(startupNotifyModeEnv, legacyStartupNotifyModeEnv) != "1" {
 		return
 	}
 	err := sendNativeStartupNotification(
-		os.Getenv(startupNotifyNetworkEnv),
-		os.Getenv(startupNotifyAddressEnv),
-		os.Getenv(startupNotifyTokenEnv),
+		identity.Environment(startupNotifyNetworkEnv, legacyStartupNotifyNetworkEnv),
+		identity.Environment(startupNotifyAddressEnv, legacyStartupNotifyAddressEnv),
+		identity.Environment(startupNotifyTokenEnv, legacyStartupNotifyTokenEnv),
 	)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "核心启动通知失败：%v\n", err)

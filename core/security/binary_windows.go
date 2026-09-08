@@ -4,14 +4,15 @@ package security
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 
 	"golang.org/x/sys/windows"
 )
 
 func SecureBinary(corePath string) error {
-	if os.Getenv("SPARKLE_SKIP_CORE_ACL_HARDENING") == "1" {
+	if identity.Environment("KOKOROBOX_SKIP_CORE_ACL_HARDENING", "SPARKLE_SKIP_CORE_ACL_HARDENING") == "1" {
 		return nil
 	}
 

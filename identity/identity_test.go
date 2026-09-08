@@ -24,6 +24,22 @@ func TestConfigDirectoryOverrideAcceptsLegacyEnvironment(t *testing.T) {
 	}
 }
 
+func TestEnvironmentPrefersCurrentValue(t *testing.T) {
+	t.Setenv("KOKOROBOX_TEST_VALUE", "current")
+	t.Setenv("SPARKLE_TEST_VALUE", "legacy")
+	if actual := Environment("KOKOROBOX_TEST_VALUE", "SPARKLE_TEST_VALUE"); actual != "current" {
+		t.Fatalf("Environment() = %q, want current", actual)
+	}
+}
+
+func TestEnvironmentFallsBackToLegacyValue(t *testing.T) {
+	t.Setenv("KOKOROBOX_TEST_VALUE", "")
+	t.Setenv("SPARKLE_TEST_VALUE", "legacy")
+	if actual := Environment("KOKOROBOX_TEST_VALUE", "SPARKLE_TEST_VALUE"); actual != "legacy" {
+		t.Fatalf("Environment() = %q, want legacy", actual)
+	}
+}
+
 func TestDataDirectoryMigratesLegacyDirectoryWhenCurrentIsMissing(t *testing.T) {
 	root := t.TempDir()
 	legacy := filepath.Join(root, "sparkle")

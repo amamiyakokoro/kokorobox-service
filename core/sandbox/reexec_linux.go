@@ -8,11 +8,13 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/amamiyakokoro/kokorobox-service/identity"
+
 	"golang.org/x/sys/unix"
 )
 
 func init() {
-	if os.Getenv(reexecModeEnv) != "1" {
+	if identity.Environment(reexecModeEnv, legacyReexecModeEnv) != "1" {
 		return
 	}
 	if err := runReexec(); err != nil {

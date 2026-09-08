@@ -10,12 +10,17 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/amamiyakokoro/kokorobox-service/identity"
 )
 
-const serviceRuntimeExecEnv = "SPARKLE_SERVICE_RUNTIME_EXEC"
+const (
+	serviceRuntimeExecEnv       = "KOKOROBOX_SERVICE_RUNTIME_EXEC"
+	legacyServiceRuntimeExecEnv = "SPARKLE_SERVICE_RUNTIME_EXEC"
+)
 
 func ensureServiceRuntimeExecutable() error {
-	if os.Getenv(serviceRuntimeExecEnv) == "1" {
+	if identity.Environment(serviceRuntimeExecEnv, legacyServiceRuntimeExecEnv) == "1" {
 		return nil
 	}
 
