@@ -3,8 +3,8 @@
 package coreapi
 
 import (
-	corepkg "github.com/UruhaLushia/sparkle-service/core"
-	"github.com/UruhaLushia/sparkle-service/route/pipectx"
+	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 	"net/http"
 )
 

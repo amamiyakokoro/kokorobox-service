@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 )
 
 type controllerTransportCache struct {

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/core/security"
-	"github.com/UruhaLushia/sparkle-service/listen"
-	"github.com/UruhaLushia/sparkle-service/listen/namedpipe"
+	"github.com/amamiyakokoro/kokorobox-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/listen"
+	"github.com/amamiyakokoro/kokorobox-service/listen/namedpipe"
 )
 
 func createNativeStartupHook(token string) (*coreStartupHook, error) {

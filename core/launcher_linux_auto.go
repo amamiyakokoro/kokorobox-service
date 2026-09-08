@@ -5,7 +5,7 @@ package core
 import (
 	"log"
 
-	"github.com/UruhaLushia/sparkle-service/core/sandbox"
+	"github.com/amamiyakokoro/kokorobox-service/core/sandbox"
 )
 
 type linuxAutoLauncher struct{}

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"

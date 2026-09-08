@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/route/auth"
-	"github.com/UruhaLushia/sparkle-service/route/coreapi"
-	"github.com/UruhaLushia/sparkle-service/route/pipectx"
-	"github.com/UruhaLushia/sparkle-service/route/processrouterapi"
-	"github.com/UruhaLushia/sparkle-service/route/sysproxyapi"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/route/auth"
+	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
+	"github.com/amamiyakokoro/kokorobox-service/route/processrouterapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/sysproxyapi"
 	"net"
 	"net/http"
 	"os"
@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/listen"
+	"github.com/amamiyakokoro/kokorobox-service/listen"
 )
 
 const serverShutdownTimeout = 3 * time.Second

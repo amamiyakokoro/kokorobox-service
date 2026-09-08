@@ -2,8 +2,8 @@ package sysapi
 
 import (
 	"fmt"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
-	"github.com/UruhaLushia/sparkle-service/sys"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/sys"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"

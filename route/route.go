@@ -1,13 +1,13 @@
 package route
 
 import (
-	"github.com/UruhaLushia/sparkle-service/route/auth"
-	"github.com/UruhaLushia/sparkle-service/route/coreapi"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
-	"github.com/UruhaLushia/sparkle-service/route/processrouterapi"
-	"github.com/UruhaLushia/sparkle-service/route/serviceapi"
-	"github.com/UruhaLushia/sparkle-service/route/sysapi"
-	"github.com/UruhaLushia/sparkle-service/route/sysproxyapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/auth"
+	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/route/processrouterapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/serviceapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/sysapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/sysproxyapi"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"

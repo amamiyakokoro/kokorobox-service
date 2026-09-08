@@ -5,7 +5,7 @@ package coreapi
 import (
 	"context"
 	"fmt"
-	"github.com/UruhaLushia/sparkle-service/listen/namedpipe"
+	"github.com/amamiyakokoro/kokorobox-service/listen/namedpipe"
 	"net"
 )
 

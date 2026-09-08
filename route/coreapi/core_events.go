@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	corepkg "github.com/UruhaLushia/sparkle-service/core"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 )
 
 func coreEvents(w http.ResponseWriter, r *http.Request) {

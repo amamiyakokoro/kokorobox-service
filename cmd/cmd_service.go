@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/route"
-	appservice "github.com/UruhaLushia/sparkle-service/service"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/route"
+	appservice "github.com/amamiyakokoro/kokorobox-service/service"
 
 	kservice "github.com/kardianos/service"
 	"github.com/spf13/cobra"

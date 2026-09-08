@@ -1,9 +1,9 @@
 package coreapi
 
 import (
-	corepkg "github.com/UruhaLushia/sparkle-service/core"
-	"github.com/UruhaLushia/sparkle-service/route/auth"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
+	"github.com/amamiyakokoro/kokorobox-service/route/auth"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 	"net/http"
 	"sync/atomic"
 

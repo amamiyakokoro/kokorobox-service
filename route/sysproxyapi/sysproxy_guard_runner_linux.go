@@ -5,7 +5,7 @@ package sysproxyapi
 import (
 	"context"
 	"fmt"
-	"github.com/UruhaLushia/sparkle-service/route/pipectx"
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 	"net/http"
 	"os"
 	"strings"

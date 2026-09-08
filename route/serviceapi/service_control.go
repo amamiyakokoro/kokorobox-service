@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
-	appservice "github.com/UruhaLushia/sparkle-service/service"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
+	appservice "github.com/amamiyakokoro/kokorobox-service/service"
 
 	"github.com/go-chi/chi/v5"
 )

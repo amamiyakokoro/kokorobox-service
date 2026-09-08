@@ -15,8 +15,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/UruhaLushia/sparkle-service/core/security"
-	"github.com/UruhaLushia/sparkle-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 	"golang.org/x/sys/windows"
 )
 

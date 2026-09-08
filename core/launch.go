@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/UruhaLushia/sparkle-service/core/controller"
-	"github.com/UruhaLushia/sparkle-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/core/controller"
+	"github.com/amamiyakokoro/kokorobox-service/core/security"
 )
 
 type LaunchProfile struct {

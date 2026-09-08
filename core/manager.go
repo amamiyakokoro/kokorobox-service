@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/core/controller"
-	"github.com/UruhaLushia/sparkle-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/core/controller"
+	"github.com/amamiyakokoro/kokorobox-service/core/security"
 
 	"github.com/shirou/gopsutil/v4/process"
 )

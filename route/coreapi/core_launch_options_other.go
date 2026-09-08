@@ -3,7 +3,7 @@
 package coreapi
 
 import (
-	corepkg "github.com/UruhaLushia/sparkle-service/core"
+	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
 	"net/http"
 )
 

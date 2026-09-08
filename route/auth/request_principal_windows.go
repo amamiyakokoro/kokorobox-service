@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/UruhaLushia/sparkle-service/route/pipectx"
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 
 	"golang.org/x/sys/windows"
 )

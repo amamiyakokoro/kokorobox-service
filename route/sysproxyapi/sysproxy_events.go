@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 )
 
 const (

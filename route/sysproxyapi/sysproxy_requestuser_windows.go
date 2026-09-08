@@ -5,7 +5,7 @@ package sysproxyapi
 import (
 	"net/http"
 
-	"github.com/UruhaLushia/sparkle-service/route/pipectx"
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 
 	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 )

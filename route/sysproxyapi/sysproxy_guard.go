@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/UruhaLushia/sparkle-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 
 	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 )

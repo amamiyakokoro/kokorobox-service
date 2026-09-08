@@ -1,4 +1,4 @@
-module github.com/UruhaLushia/sparkle-service
+module github.com/amamiyakokoro/kokorobox-service
 
 go 1.26.0
 

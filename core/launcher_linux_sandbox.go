@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/UruhaLushia/sparkle-service/core/sandbox"
+	"github.com/amamiyakokoro/kokorobox-service/core/sandbox"
 )
 
 type linuxSandboxLauncher struct{}

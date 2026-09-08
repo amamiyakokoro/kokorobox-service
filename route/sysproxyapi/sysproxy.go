@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 
 	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 	"github.com/go-chi/chi/v5"

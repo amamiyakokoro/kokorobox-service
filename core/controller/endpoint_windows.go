@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/UruhaLushia/sparkle-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/core/security"
 
 	"golang.org/x/sys/windows"
 )

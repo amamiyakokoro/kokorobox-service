@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/route"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/route"
 
 	"github.com/spf13/cobra"
 )

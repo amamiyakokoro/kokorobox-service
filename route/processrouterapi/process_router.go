@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/UruhaLushia/sparkle-service/log"
-	"github.com/UruhaLushia/sparkle-service/processrouter"
-	"github.com/UruhaLushia/sparkle-service/route/httphelper"
+	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/processrouter"
+	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )
