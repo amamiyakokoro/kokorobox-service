@@ -84,9 +84,9 @@ jobs:
       run: |
         go env
         if [ "${{ matrix.jobs.goos }}" == "windows" ]; then
-          go build -ldflags "-extldflags --static -w -s -buildid=" -o sparkle-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          go build -ldflags "-extldflags --static -w -s -buildid=" -o kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
         else
-          go build -ldflags "-extldflags --static -w -s -buildid=" -o sparkle-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          go build -ldflags "-extldflags --static -w -s -buildid=" -o kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
 
     - name: Archive production artifacts
@@ -94,7 +94,7 @@ jobs:
       with:
         name: "${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}"
         path: |
-          sparkle-service-${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}*
+          kokorobox-service-${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}*
 
   pre-release:
     if: github.event_name != 'pull_request'
