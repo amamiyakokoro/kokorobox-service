@@ -19,6 +19,7 @@ import (
 
 const (
 	authVersionV2       = "2"
+	authVersionV3       = "3"
 	maxTimestampDriftV2 = 30 * time.Second
 )
 
@@ -95,11 +96,12 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if r.Header.Get("X-Auth-Version") != authVersionV2 {
-			httphelper.SendError(w, httphelper.Unauthorized("仅支持 Auth V2"))
+		version := r.Header.Get("X-Auth-Version")
+		if version != authVersionV2 && version != authVersionV3 {
+			httphelper.SendError(w, httphelper.Unauthorized("仅支持 Auth V2/V3"))
 			return
 		}
-		err := authenticateV2(r, km)
+		err := authenticateRequest(r, km, version)
 		if err != nil {
 			httphelper.SendError(w, err)
 			return
@@ -113,7 +115,7 @@ func RequireAuth(next http.Handler) http.Handler {
 	return AuthMiddleware(next)
 }
 
-func authenticateV2(r *http.Request, km *KeyManager) error {
+func authenticateRequest(r *http.Request, km *KeyManager, version string) error {
 	timestamp := r.Header.Get("X-Timestamp")
 	keyID := r.Header.Get("X-Key-Id")
 	nonce := r.Header.Get("X-Nonce")
@@ -121,7 +123,7 @@ func authenticateV2(r *http.Request, km *KeyManager) error {
 	signature := r.Header.Get("X-Signature")
 
 	if timestamp == "" || keyID == "" || nonce == "" || contentHash == "" || signature == "" {
-		return httphelper.Unauthorized("缺少 V2 认证信息")
+		return httphelper.Unauthorized("缺少认证信息")
 	}
 
 	ts, err := strconv.ParseInt(timestamp, 10, 64)
@@ -145,7 +147,7 @@ func authenticateV2(r *http.Request, km *KeyManager) error {
 		return httphelper.Unauthorized("请求体摘要不匹配")
 	}
 
-	canonical, err := buildCanonicalRequestV2(r, timestamp, nonce, keyID, bodyHash)
+	canonical, err := buildCanonicalRequest(r, timestamp, nonce, keyID, bodyHash, version)
 	if err != nil {
 		return httphelper.BadRequest(err.Error())
 	}
@@ -178,7 +180,12 @@ func hashRequestBody(r *http.Request) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func buildCanonicalRequestV2(r *http.Request, timestamp string, nonce string, keyID string, bodyHash string) (string, error) {
+func buildCanonicalRequest(r *http.Request, timestamp string, nonce string, keyID string, bodyHash string, version string) (string, error) {
+	domain, err := canonicalDomain(version)
+	if err != nil {
+		return "", err
+	}
+
 	query, err := canonicalizeQuery(r.URL.RawQuery)
 	if err != nil {
 		return "", fmt.Errorf("规范化请求参数失败： %w", err)
@@ -190,7 +197,7 @@ func buildCanonicalRequestV2(r *http.Request, timestamp string, nonce string, ke
 	}
 
 	return strings.Join([]string{
-		"SPARKLE-AUTH-V2",
+		domain,
 		timestamp,
 		nonce,
 		keyID,
@@ -199,6 +206,17 @@ func buildCanonicalRequestV2(r *http.Request, timestamp string, nonce string, ke
 		query,
 		bodyHash,
 	}, "\n"), nil
+}
+
+func canonicalDomain(version string) (string, error) {
+	switch version {
+	case authVersionV2:
+		return "SPARKLE-AUTH-V2", nil
+	case authVersionV3:
+		return "KOKOROBOX-AUTH-V3", nil
+	default:
+		return "", fmt.Errorf("不支持的认证版本: %s", version)
+	}
 }
 
 func canonicalizeQuery(rawQuery string) (string, error) {
