@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/amamiyakokoro/kokorobox-service/identity"
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/route"
 	appservice "github.com/amamiyakokoro/kokorobox-service/service"
@@ -288,8 +287,11 @@ var serviceInitCmd = &cobra.Command{
 		if authorizedSID == "" && !cmd.Flags().Changed("authorized-uid") {
 			return outputServiceCommandError("init", "错误：必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份", errors.New("必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份"))
 		}
-		userDataDir := route.GetConfigDir()
-		keyDir := filepath.Join(userDataDir, identity.ConfigDirectoryName, "keys")
+		dataDir, err := route.GetServiceDataDir()
+		if err != nil {
+			return outputServiceCommandError("init", "准备服务数据目录失败", err)
+		}
+		keyDir := filepath.Join(dataDir, "keys")
 
 		_ = route.InitKeyManager(keyDir)
 

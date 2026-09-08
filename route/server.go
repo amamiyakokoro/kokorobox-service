@@ -46,10 +46,16 @@ func GetConfigDir() string {
 	}
 }
 
-func Start(addr string) error {
-	userDataDir := GetConfigDir()
+func GetServiceDataDir() (string, error) {
+	return identity.DataDirectory(GetConfigDir())
+}
 
-	keyDir := filepath.Join(userDataDir, identity.ConfigDirectoryName, "keys")
+func Start(addr string) error {
+	dataDir, err := GetServiceDataDir()
+	if err != nil {
+		return fmt.Errorf("prepare service data directory: %w", err)
+	}
+	keyDir := filepath.Join(dataDir, "keys")
 
 	if err := auth.InitKeyManager(keyDir); err != nil {
 		log.Printf("警告: 初始化密钥管理器失败: %v", err)
@@ -67,7 +73,6 @@ func Start(addr string) error {
 		log.Println("警告：请求方身份绑定未启用")
 	}
 
-	var err error
 	if runtime.GOOS == "windows" {
 		err = startServer(addr, StartPipe)
 	} else {
