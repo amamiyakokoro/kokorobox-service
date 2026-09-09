@@ -109,8 +109,8 @@ type routerCommand struct {
 	Command           string       `json:"command"`
 	Proxy             routerProxy  `json:"proxy"`
 	FailClosed        bool         `json:"failClosed"`
-	ProxyUDPDNS       bool         `json:"proxyUdpDns"`
-	DiagnosticLogging bool         `json:"diagnosticLogging"`
+	ProxyUDPDNS       bool         `json:"proxyUdpDns,omitempty"`
+	DiagnosticLogging bool         `json:"diagnosticLogging,omitempty"`
 	Rules             []routerRule `json:"rules"`
 }
 

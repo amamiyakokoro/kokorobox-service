@@ -111,6 +111,24 @@ func TestProxyRulesBecomeBlockWhenMihomoIsUnavailable(t *testing.T) {
 	if len(payload) == 0 {
 		t.Fatal("expected native router command")
 	}
+	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7891},"failClosed":true,"rules":[{"executablePath":"C:\\Program Files\\Discord\\Discord.exe","protocol":"BOTH","action":"BLOCK","enabled":true,"priority":1}]}` {
+		t.Fatalf("unexpected router command payload: %s", payload)
+	}
+}
+
+func TestLinuxRouterCommandIncludesOptionalFlagsWhenEnabled(t *testing.T) {
+	request, err := normalizeRulesRequest(linuxRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := buildRouterCommand(request, true)
+	payload, err := json.Marshal(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7894},"failClosed":true,"proxyUdpDns":true,"diagnosticLogging":true,"rules":[{"executablePath":"/usr/lib/firefox/firefox","protocol":"BOTH","action":"PROXY","enabled":true,"priority":1}]}` {
+		t.Fatalf("unexpected Linux router command payload: %s", payload)
+	}
 }
 
 func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
