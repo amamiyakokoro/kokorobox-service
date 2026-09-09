@@ -70,6 +70,7 @@ type Status struct {
 	State                     State  `json:"state"`
 	Generation                uint64 `json:"generation"`
 	MihomoAvailable           bool   `json:"mihomo_available"`
+	FirewallReady             bool   `json:"firewall_ready"`
 	ProtectedApplicationCount int    `json:"protected_application_count"`
 	ProxyPort                 int    `json:"proxy_port,omitempty"`
 	RouterPID                 int    `json:"router_pid,omitempty"`

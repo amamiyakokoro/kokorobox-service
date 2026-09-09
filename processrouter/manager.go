@@ -18,36 +18,46 @@ import (
 )
 
 const (
-	monitorInterval = 3 * time.Second
-	probeTimeout    = 750 * time.Millisecond
-	clientLease     = 20 * time.Second
+	monitorInterval       = 3 * time.Second
+	firewallProbeInterval = 30 * time.Second
+	probeTimeout          = 750 * time.Millisecond
+	clientLease           = 20 * time.Second
 )
 
 type Manager struct {
-	mu            sync.Mutex
-	binaryDir     string
-	binaryPath    string
-	configDir     string
-	configPath    string
-	process       nativeProcess
-	rules         RulesRequest
-	desired       bool
-	generation    uint64
-	activePolicy  string
-	state         State
-	mihomoReady   bool
-	lastError     string
-	lastContact   time.Time
-	monitorCancel context.CancelFunc
-	restoreOnce   sync.Once
+	mu                sync.Mutex
+	binaryDir         string
+	binaryPath        string
+	configDir         string
+	configPath        string
+	firewall          firewallController
+	firewallReady     bool
+	firewallCleaned   bool
+	lastFirewallCheck time.Time
+	process           nativeProcess
+	rules             RulesRequest
+	desired           bool
+	generation        uint64
+	activePolicy      string
+	state             State
+	mihomoReady       bool
+	lastError         string
+	lastContact       time.Time
+	monitorCancel     context.CancelFunc
+	restoreOnce       sync.Once
 }
 
 func NewManager(binaryDir, configDir string) *Manager {
+	return newManager(binaryDir, configDir, newProcessRouterFirewall())
+}
+
+func newManager(binaryDir, configDir string, firewall firewallController) *Manager {
 	return &Manager{
 		binaryDir:  binaryDir,
 		binaryPath: filepath.Join(binaryDir, "kokorobox-process-router.exe"),
 		configDir:  configDir,
 		configPath: filepath.Join(configDir, "config.json"),
+		firewall:   firewall,
 		state:      StateStopped,
 		rules: RulesRequest{
 			Version: ProtocolVersion, ProxyPort: ProxyPort, FailClosed: true,
@@ -56,8 +66,7 @@ func NewManager(binaryDir, configDir string) *Manager {
 }
 
 func NewDefaultManager() *Manager {
-	executable, _ := os.Executable()
-	binaryDir := filepath.Join(filepath.Dir(executable), "process-router")
+	binaryDir := filepath.Dir(DefaultBinaryPath())
 	configRoot := identity.ConfigDirectoryOverride()
 	if configRoot == "" {
 		if runtime.GOOS == "windows" {
@@ -131,6 +140,7 @@ func (m *Manager) Enable() (Status, error) {
 		return m.Status(), &ValidationError{Err: errors.New("cannot start process router without an enabled rule")}
 	}
 	m.desired = true
+	m.firewallCleaned = false
 	m.lastContact = time.Now()
 	err := m.persistLocked()
 	m.mu.Unlock()
@@ -150,7 +160,8 @@ func (m *Manager) Disable() error {
 	m.lastError = ""
 	persistErr := m.persistLocked()
 	stopErr := m.stopProcessLocked()
-	return errors.Join(persistErr, stopErr)
+	firewallErr := m.removeFirewallLocked()
+	return errors.Join(persistErr, stopErr, firewallErr)
 }
 
 func (m *Manager) Cleanup() error {
@@ -164,11 +175,12 @@ func (m *Manager) Cleanup() error {
 	m.mihomoReady = false
 	m.lastError = ""
 	stopErr := m.stopProcessLocked()
+	firewallErr := m.removeFirewallLocked()
 	removeErr := os.Remove(m.configPath)
 	if errors.Is(removeErr, os.ErrNotExist) {
 		removeErr = nil
 	}
-	return errors.Join(stopErr, removeErr)
+	return errors.Join(stopErr, firewallErr, removeErr)
 }
 
 func (m *Manager) Close() error {
@@ -178,7 +190,12 @@ func (m *Manager) Close() error {
 		m.monitorCancel()
 		m.monitorCancel = nil
 	}
-	return m.stopProcessLocked()
+	wasActive := m.desired || m.process != nil || m.firewallReady
+	stopErr := m.stopProcessLocked()
+	if !wasActive {
+		return stopErr
+	}
+	return errors.Join(stopErr, m.removeFirewallLocked())
 }
 
 func (m *Manager) Reconcile() error {
@@ -191,7 +208,7 @@ func (m *Manager) Reconcile() error {
 		m.state = StateStopped
 		m.mihomoReady = false
 		m.lastError = ""
-		return m.stopProcessLocked()
+		return errors.Join(m.stopProcessLocked(), m.removeFirewallLocked())
 	}
 	if !Supported() {
 		m.setErrorLocked(ErrUnsupported)
@@ -207,10 +224,20 @@ func (m *Manager) Reconcile() error {
 			m.setErrorLocked(err)
 			return err
 		}
+	}
+	if err := m.ensureFirewallLocked(m.process == nil); err != nil {
+		stopErr := m.stopProcessLocked()
+		wrapped := fmt.Errorf("application-routing firewall is unavailable: %w", err)
+		m.setErrorLocked(wrapped)
+		return errors.Join(wrapped, stopErr)
+	}
+	if m.process == nil {
 		process, err := startNativeProcess(m.binaryPath, m.binaryDir)
 		if err != nil {
-			m.setErrorLocked(err)
-			return err
+			firewallErr := m.removeFirewallLocked()
+			combined := errors.Join(err, firewallErr)
+			m.setErrorLocked(combined)
+			return combined
 		}
 		m.process = process
 		m.activePolicy = ""
@@ -221,8 +248,11 @@ func (m *Manager) Reconcile() error {
 	policy := strconv.FormatUint(m.generation, 10) + ":" + strconv.FormatBool(available)
 	if policy != m.activePolicy {
 		if err := sendRules(m.process, buildRouterCommand(m.rules, available)); err != nil {
-			m.setErrorLocked(err)
-			return err
+			stopErr := m.stopProcessLocked()
+			firewallErr := m.removeFirewallLocked()
+			combined := errors.Join(err, stopErr, firewallErr)
+			m.setErrorLocked(combined)
+			return combined
 		}
 		m.activePolicy = policy
 	}
@@ -245,6 +275,7 @@ func (m *Manager) Status() Status {
 		State:                     m.state,
 		Generation:                m.generation,
 		MihomoAvailable:           m.mihomoReady,
+		FirewallReady:             m.firewallReady,
 		ProtectedApplicationCount: protectedRuleCount(m.rules),
 		LastError:                 m.lastError,
 	}
@@ -292,6 +323,41 @@ func (m *Manager) stopProcessLocked() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	return process.Stop(ctx)
+}
+
+func (m *Manager) ensureFirewallLocked(force bool) error {
+	if !force && m.firewallReady && time.Since(m.lastFirewallCheck) < firewallProbeInterval {
+		return nil
+	}
+	m.lastFirewallCheck = time.Now()
+	if err := m.firewall.Check(m.binaryPath); err == nil {
+		m.firewallReady = true
+		return nil
+	}
+	if err := m.firewall.Ensure(m.binaryPath); err != nil {
+		m.firewallReady = false
+		return err
+	}
+	if err := m.firewall.Check(m.binaryPath); err != nil {
+		m.firewallReady = false
+		return err
+	}
+	m.firewallReady = true
+	m.firewallCleaned = false
+	return nil
+}
+
+func (m *Manager) removeFirewallLocked() error {
+	if m.firewallCleaned {
+		return nil
+	}
+	m.firewallReady = false
+	m.lastFirewallCheck = time.Time{}
+	if err := m.firewall.Remove(); err != nil {
+		return err
+	}
+	m.firewallCleaned = true
+	return nil
 }
 
 func (m *Manager) setErrorLocked(err error) {

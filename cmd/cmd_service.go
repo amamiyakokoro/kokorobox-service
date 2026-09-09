@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/kokorobox-service/processrouter"
 	"github.com/amamiyakokoro/kokorobox-service/route"
 	appservice "github.com/amamiyakokoro/kokorobox-service/service"
 
@@ -150,6 +151,9 @@ var serviceUninstallCmd = &cobra.Command{
 
 		if err := s.Stop(); err != nil {
 			return outputServiceCommandError("uninstall", "停止服务失败", err)
+		}
+		if err := processrouter.RemoveFirewallRules(); err != nil {
+			return outputServiceCommandError("uninstall", "清理应用分流防火墙失败", err)
 		}
 		if err := s.Uninstall(); err != nil {
 			return outputServiceCommandError("uninstall", "卸载服务失败", err)

@@ -2,12 +2,40 @@ package processrouter
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+type fakeFirewall struct {
+	checkErr    error
+	ensureErr   error
+	removeErr   error
+	checkCalls  int
+	ensureCalls int
+	removeCalls int
+}
+
+func (f *fakeFirewall) Check(string) error {
+	f.checkCalls++
+	return f.checkErr
+}
+
+func (f *fakeFirewall) Ensure(string) error {
+	f.ensureCalls++
+	if f.ensureErr == nil {
+		f.checkErr = nil
+	}
+	return f.ensureErr
+}
+
+func (f *fakeFirewall) Remove() error {
+	f.removeCalls++
+	return f.removeErr
+}
 
 func validRequest() RulesRequest {
 	return RulesRequest{
@@ -159,7 +187,8 @@ func TestPersistsCanonicalRulesForServiceRestart(t *testing.T) {
 }
 
 func TestExpiredClientLeasePreventsAutomaticRouterRestore(t *testing.T) {
-	manager := NewManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir())
+	firewall := &fakeFirewall{}
+	manager := newManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir(), firewall)
 	manager.mu.Lock()
 	manager.desired = true
 	manager.lastContact = time.Now().Add(-clientLease - time.Second)
@@ -170,5 +199,67 @@ func TestExpiredClientLeasePreventsAutomaticRouterRestore(t *testing.T) {
 	}
 	if state := manager.Status().State; state != StateStopped {
 		t.Fatalf("expected expired lease to stop router, got %s", state)
+	}
+	if firewall.removeCalls != 1 {
+		t.Fatalf("expected expired lease to remove firewall rules, got %d calls", firewall.removeCalls)
+	}
+	if err := manager.Reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if firewall.removeCalls != 1 {
+		t.Fatalf("expected expired lease cleanup to be idempotent, got %d calls", firewall.removeCalls)
+	}
+}
+
+func TestFirewallRulesAreRepairedAndReportedHealthy(t *testing.T) {
+	firewall := &fakeFirewall{checkErr: errors.New("missing")}
+	manager := newManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir(), firewall)
+	manager.mu.Lock()
+	err := manager.ensureFirewallLocked(true)
+	manager.mu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firewall.ensureCalls != 1 || firewall.checkCalls != 2 {
+		t.Fatalf("expected one repair and two checks, got ensure=%d check=%d", firewall.ensureCalls, firewall.checkCalls)
+	}
+	if !manager.Status().FirewallReady {
+		t.Fatal("expected firewall health in process-router status")
+	}
+}
+
+func TestFirewallRepairFailureIsNotHealthy(t *testing.T) {
+	firewall := &fakeFirewall{checkErr: errors.New("missing"), ensureErr: errors.New("access denied")}
+	manager := newManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir(), firewall)
+	manager.mu.Lock()
+	err := manager.ensureFirewallLocked(true)
+	manager.mu.Unlock()
+	if err == nil {
+		t.Fatal("expected firewall repair failure")
+	}
+	if manager.Status().FirewallReady {
+		t.Fatal("failed firewall repair must not be reported healthy")
+	}
+}
+
+func TestDisablingRouterRemovesFirewallRules(t *testing.T) {
+	firewall := &fakeFirewall{}
+	manager := newManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir(), firewall)
+	if err := manager.Disable(); err != nil {
+		t.Fatal(err)
+	}
+	if firewall.removeCalls != 1 {
+		t.Fatalf("expected disable to remove firewall rules, got %d calls", firewall.removeCalls)
+	}
+}
+
+func TestClosingIdleManagerPreservesInstallerFirewallRules(t *testing.T) {
+	firewall := &fakeFirewall{}
+	manager := newManager(filepath.Join(t.TempDir(), "process-router"), t.TempDir(), firewall)
+	if err := manager.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if firewall.removeCalls != 0 {
+		t.Fatalf("idle service shutdown must preserve installer rules, got %d remove calls", firewall.removeCalls)
 	}
 }

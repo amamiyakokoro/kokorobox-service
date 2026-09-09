@@ -59,6 +59,12 @@ func init() {
 	MainCmd.AddCommand(sysproxyCmd)
 	MainCmd.AddCommand(serverCmd)
 	MainCmd.AddCommand(serviceCmd)
+	MainCmd.AddCommand(processRouterCmd)
+
+	processRouterCmd.AddCommand(processRouterFirewallCmd)
+	processRouterFirewallCmd.AddCommand(processRouterFirewallEnsureCmd)
+	processRouterFirewallCmd.AddCommand(processRouterFirewallCheckCmd)
+	processRouterFirewallCmd.AddCommand(processRouterFirewallRemoveCmd)
 
 	sysproxyCmd.AddCommand(proxyCmd)
 	sysproxyCmd.AddCommand(pacCmd)
