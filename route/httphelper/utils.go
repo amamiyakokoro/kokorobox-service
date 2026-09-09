@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +23,15 @@ type Response struct {
 type HTTPError struct {
 	StatusCode int
 	Message    string
+}
+
+// LocaleMiddleware selects the response language for one request. The
+// process-wide KOKOROBOX_LOCALE value is used when Accept-Language is absent.
+func LocaleMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Language", string(i18n.FromAcceptLanguage(r.Header.Get("Accept-Language"))))
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (e *HTTPError) Error() string {
@@ -135,10 +145,15 @@ func isCoreControllerRequest(path string) bool {
 
 func SendJSONWithStatus(w http.ResponseWriter, statusCode int, status string, message string) {
 	w.Header().Set("Content-Type", "application/json")
+	locale := i18n.Default()
+	if value := w.Header().Get("Content-Language"); value != "" {
+		locale = i18n.Normalize(value)
+	}
+	w.Header().Set("Content-Language", string(locale))
 	w.WriteHeader(statusCode)
 	resp := Response{
 		Status:  status,
-		Message: message,
+		Message: i18n.Text(locale, message),
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("编码 HTTP JSON 响应失败：%v", err)

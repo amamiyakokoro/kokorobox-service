@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/processrouter"
 	"github.com/amamiyakokoro/kokorobox-service/route"
@@ -102,17 +103,17 @@ func normalizeServiceStatus(status kservice.Status) string {
 func serviceStatusMessage(state string) string {
 	switch state {
 	case "running":
-		return "服务状态：运行中"
+		return i18n.DefaultText("服务状态：运行中")
 	case "stopped":
-		return "服务状态：已停止"
+		return i18n.DefaultText("服务状态：已停止")
 	default:
-		return "服务状态：未知"
+		return i18n.DefaultText("服务状态：未知")
 	}
 }
 
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "安装 KokoroBox 服务",
+	Short: i18n.DefaultText("安装 KokoroBox 服务"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -137,7 +138,7 @@ var serviceInstallCmd = &cobra.Command{
 
 var serviceUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "卸载 KokoroBox 服务",
+	Short: i18n.DefaultText("卸载 KokoroBox 服务"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -164,7 +165,7 @@ var serviceUninstallCmd = &cobra.Command{
 
 var serviceStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: "启动 KokoroBox 服务",
+	Short: i18n.DefaultText("启动 KokoroBox 服务"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -185,7 +186,7 @@ var serviceStartCmd = &cobra.Command{
 
 var serviceStopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "停止 KokoroBox 服务",
+	Short: i18n.DefaultText("停止 KokoroBox 服务"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -206,7 +207,7 @@ var serviceStopCmd = &cobra.Command{
 
 var serviceRestartCmd = &cobra.Command{
 	Use:   "restart",
-	Short: "重启 KokoroBox 服务",
+	Short: i18n.DefaultText("重启 KokoroBox 服务"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -227,7 +228,7 @@ var serviceRestartCmd = &cobra.Command{
 
 var serviceStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "查看 KokoroBox 服务状态",
+	Short: i18n.DefaultText("查看 KokoroBox 服务状态"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -251,7 +252,7 @@ var serviceStatusCmd = &cobra.Command{
 
 var serviceRunCmd = &cobra.Command{
 	Use:   "run",
-	Short: "运行 KokoroBox 服务",
+	Short: i18n.DefaultText("运行 KokoroBox 服务"),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ensureServiceRuntimeExecutable(); err != nil {
 			log.Fatal(err)
@@ -275,12 +276,12 @@ var serviceRunCmd = &cobra.Command{
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "管理 KokoroBox 服务",
+	Short: i18n.DefaultText("管理 KokoroBox 服务"),
 }
 
 var serviceInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "初始化服务（传入公钥）",
+	Short: i18n.DefaultText("初始化服务（传入公钥）"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		publicKey := cmd.Flag("public-key").Value.String()
 		authorizedSID := cmd.Flag("authorized-sid").Value.String()
@@ -367,7 +368,7 @@ func init() {
 	serviceCmd.AddCommand(serviceStatusCmd)
 	serviceCmd.AddCommand(serviceRunCmd)
 
-	serviceInitCmd.Flags().StringP("public-key", "k", "", "客户端公钥")
-	serviceInitCmd.Flags().String("authorized-sid", "", "允许访问服务的 Windows SID")
-	serviceInitCmd.Flags().Uint32("authorized-uid", 0, "允许访问服务的 Unix UID")
+	serviceInitCmd.Flags().StringP("public-key", "k", "", i18n.DefaultText("客户端公钥"))
+	serviceInitCmd.Flags().String("authorized-sid", "", i18n.DefaultText("允许访问服务的 Windows SID"))
+	serviceInitCmd.Flags().Uint32("authorized-uid", 0, i18n.DefaultText("允许访问服务的 Unix UID"))
 }

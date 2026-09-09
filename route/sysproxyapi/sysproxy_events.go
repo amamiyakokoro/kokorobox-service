@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 )
 
@@ -141,7 +142,7 @@ func sysproxyEvents(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if err := writeSysproxyEvent(writeFrame, event); err != nil {
+			if err := writeSysproxyEvent(writeFrame, i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")), event); err != nil {
 				return
 			}
 		case <-done:
@@ -152,7 +153,9 @@ func sysproxyEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeSysproxyEvent(writeFrame func(byte, []byte) error, event sysproxyEvent) error {
+func writeSysproxyEvent(writeFrame func(byte, []byte) error, locale i18n.Locale, event sysproxyEvent) error {
+	event.Message = i18n.Text(locale, event.Message)
+	event.Error = i18n.Text(locale, event.Error)
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return err

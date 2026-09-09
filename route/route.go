@@ -17,6 +17,7 @@ import (
 func router() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
+	r.Use(httphelper.LocaleMiddleware)
 	r.Use(httphelper.RequestLogger)
 
 	r.Group(func(r chi.Router) {

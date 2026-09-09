@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
+	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 )
 
@@ -51,7 +52,7 @@ func coreEvents(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if err := writeCoreEvent(writeFrame, event); err != nil {
+			if err := writeCoreEvent(writeFrame, i18n.FromAcceptLanguage(r.Header.Get("Accept-Language")), event); err != nil {
 				return
 			}
 		case <-done:
@@ -62,7 +63,9 @@ func coreEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeCoreEvent(writeFrame func(byte, []byte) error, event corepkg.CoreEvent) error {
+func writeCoreEvent(writeFrame func(byte, []byte) error, locale i18n.Locale, event corepkg.CoreEvent) error {
+	event.Message = i18n.Text(locale, event.Message)
+	event.Error = i18n.Text(locale, event.Error)
 	payload, err := json.Marshal(event)
 	if err != nil {
 		return err

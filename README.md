@@ -40,6 +40,13 @@ kokorobox-service process-router firewall check
 kokorobox-service process-router firewall remove
 ```
 
+## Localization
+
+User-visible CLI output, service logs, and HTTP API messages support English (`en`, the default)
+and Traditional Chinese (`zh-TW`). Set `KOKOROBOX_LOCALE=zh-TW` before starting the service, or
+pass `--locale zh-TW` to a CLI command. HTTP clients can select a response language per request
+with the standard `Accept-Language` header; responses include the selected `Content-Language`.
+
 ## Documentation
 
 - [Original project](https://github.com/xishang0128/sparkle-service)

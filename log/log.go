@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
@@ -37,6 +38,7 @@ func (e *jsonPrettyEncoder) Clone() zapcore.Encoder {
 }
 
 func (e *jsonPrettyEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+	ent.Message = i18n.DefaultText(ent.Message)
 	buf, err := e.Encoder.EncodeEntry(ent, fields)
 	if err != nil || (!e.pretty && !e.stackArray) {
 		return buf, err
