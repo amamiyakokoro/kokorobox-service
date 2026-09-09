@@ -47,6 +47,11 @@ and Traditional Chinese (`zh-TW`). Set `KOKOROBOX_LOCALE=zh-TW` before starting 
 pass `--locale zh-TW` to a CLI command. HTTP clients can select a response language per request
 with the standard `Accept-Language` header; responses include the selected `Content-Language`.
 
+## Upstream dependencies
+
+- [UruhaLushia/sysproxy-go](https://github.com/UruhaLushia/sysproxy-go) provides the cross-platform
+  system-proxy integration used by the `sysproxy` CLI commands and HTTP API.
+
 ## Documentation
 
 - [Original project](https://github.com/xishang0128/sparkle-service)
