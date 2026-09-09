@@ -60,7 +60,7 @@ func newManager(binaryDir, configDir string, firewall firewallController) *Manag
 		firewall:   firewall,
 		state:      StateStopped,
 		rules: RulesRequest{
-			Version: ProtocolVersion, ProxyPort: ProxyPort, FailClosed: true,
+			Version: ProtocolVersion, Platform: defaultPlatform(), ProxyPort: defaultProxyPort(), FailClosed: true,
 		},
 	}
 }
@@ -69,9 +69,12 @@ func NewDefaultManager() *Manager {
 	binaryDir := filepath.Dir(DefaultBinaryPath())
 	configRoot := identity.ConfigDirectoryOverride()
 	if configRoot == "" {
-		if runtime.GOOS == "windows" {
+		switch runtime.GOOS {
+		case "windows":
 			configRoot = `C:\ProgramData`
-		} else {
+		case "linux":
+			configRoot = filepath.Join("/root", ".config")
+		default:
 			configRoot = os.TempDir()
 		}
 	}
@@ -168,7 +171,7 @@ func (m *Manager) Cleanup() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.desired = false
-	m.rules = RulesRequest{Version: ProtocolVersion, ProxyPort: ProxyPort, FailClosed: true}
+	m.rules = RulesRequest{Version: ProtocolVersion, Platform: defaultPlatform(), ProxyPort: defaultProxyPort(), FailClosed: true}
 	m.generation++
 	m.activePolicy = ""
 	m.state = StateStopped
@@ -244,7 +247,7 @@ func (m *Manager) Reconcile() error {
 	}
 
 	requiresProxy := hasProxyRules(m.rules)
-	available := !requiresProxy || probeMihomo(ProxyPort)
+	available := !requiresProxy || probeMihomo(m.rules.ProxyPort, m.rules.Platform == "windows")
 	policy := strconv.FormatUint(m.generation, 10) + ":" + strconv.FormatBool(available)
 	if policy != m.activePolicy {
 		if err := sendRules(m.process, buildRouterCommand(m.rules, available)); err != nil {
@@ -279,8 +282,12 @@ func (m *Manager) Status() Status {
 		ProtectedApplicationCount: protectedRuleCount(m.rules),
 		LastError:                 m.lastError,
 	}
+	if m.process != nil && m.process.Alive() {
+		status.FirewallReady = m.process.FirewallReady()
+		status.Backend = m.process.Backend()
+	}
 	if hasProxyRules(m.rules) {
-		status.ProxyPort = ProxyPort
+		status.ProxyPort = m.rules.ProxyPort
 	}
 	if m.process != nil && m.process.Alive() {
 		status.RouterPID = m.process.PID()
@@ -297,7 +304,22 @@ func (m *Manager) RenewLease() {
 }
 
 func Supported() bool {
-	return runtime.GOOS == "windows" && runtime.GOARCH == "amd64"
+	return runtime.GOOS == "windows" && runtime.GOARCH == "amd64" ||
+		runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
+}
+
+func defaultPlatform() string {
+	if runtime.GOOS == "linux" {
+		return "linux"
+	}
+	return "windows"
+}
+
+func defaultProxyPort() int {
+	if runtime.GOOS == "linux" {
+		return LinuxProxyPort
+	}
+	return WindowsProxyPort
 }
 
 func (m *Manager) monitor(ctx context.Context) {
@@ -421,12 +443,15 @@ func (m *Manager) loadLocked() error {
 	return nil
 }
 
-func probeMihomo(port int) bool {
+func probeMihomo(port int, requireSOCKS bool) bool {
 	connection, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), probeTimeout)
 	if err != nil {
 		return false
 	}
 	defer connection.Close()
+	if !requireSOCKS {
+		return true
+	}
 	if err := connection.SetDeadline(time.Now().Add(probeTimeout)); err != nil {
 		return false
 	}

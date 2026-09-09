@@ -19,6 +19,8 @@ type routerEvent struct {
 type nativeProcess interface {
 	PID() int
 	Alive() bool
+	FirewallReady() bool
+	Backend() string
 	Send([]byte) error
 	Events() <-chan routerEvent
 	Stop(context.Context) error

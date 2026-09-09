@@ -3,19 +3,23 @@ package processrouter
 import (
 	"errors"
 	"fmt"
+	"path"
+	"runtime"
 	"sort"
 	"strings"
 )
 
 const (
-	ProtocolVersion = 1
-	ProxyPort       = 7891
-	maxRules        = 256
-	maxPathBytes    = 1023
+	ProtocolVersion  = 1
+	WindowsProxyPort = 7891
+	LinuxProxyPort   = 7894
+	DNSPort          = 7892
+	maxRules         = 256
+	maxPathBytes     = 1023
 )
 
 var (
-	ErrUnsupported = errors.New("process router is only supported on Windows x64")
+	ErrUnsupported = errors.New("process router is only supported on Windows x64 and Linux x64/arm64")
 	validProtocols = map[string]bool{"tcp": true, "udp": true, "both": true}
 	validActions   = map[string]bool{"proxy": true, "direct": true, "block": true}
 	protectedNames = map[string]bool{
@@ -27,6 +31,12 @@ var (
 		"kokorobox-process-router.exe": true,
 		"crashpad_handler.exe":         true,
 		"elevate.exe":                  true,
+		"kokorobox":                    true,
+		"mihomo":                       true,
+		"mihomo-alpha":                 true,
+		"kokorobox-service":            true,
+		"crashpad_handler":             true,
+		"chrome_crashpad_handler":      true,
 	}
 )
 
@@ -48,10 +58,13 @@ type Rule struct {
 }
 
 type RulesRequest struct {
-	Version    int    `json:"version"`
-	ProxyPort  int    `json:"proxy_port"`
-	FailClosed bool   `json:"fail_closed"`
-	Rules      []Rule `json:"rules"`
+	Version           int    `json:"version"`
+	Platform          string `json:"platform,omitempty"`
+	ProxyPort         int    `json:"proxy_port"`
+	FailClosed        bool   `json:"fail_closed"`
+	ProxyUDPDNS       bool   `json:"proxy_udp_dns"`
+	DiagnosticLogging bool   `json:"diagnostic_logging"`
+	Rules             []Rule `json:"rules"`
 }
 
 type State string
@@ -72,6 +85,7 @@ type Status struct {
 	MihomoAvailable           bool   `json:"mihomo_available"`
 	FirewallReady             bool   `json:"firewall_ready"`
 	ProtectedApplicationCount int    `json:"protected_application_count"`
+	Backend                   string `json:"backend,omitempty"`
 	ProxyPort                 int    `json:"proxy_port,omitempty"`
 	RouterPID                 int    `json:"router_pid,omitempty"`
 	LastError                 string `json:"last_error,omitempty"`
@@ -92,11 +106,13 @@ type routerRule struct {
 }
 
 type routerCommand struct {
-	Version    int          `json:"version"`
-	Command    string       `json:"command"`
-	Proxy      routerProxy  `json:"proxy"`
-	FailClosed bool         `json:"failClosed"`
-	Rules      []routerRule `json:"rules"`
+	Version           int          `json:"version"`
+	Command           string       `json:"command"`
+	Proxy             routerProxy  `json:"proxy"`
+	FailClosed        bool         `json:"failClosed"`
+	ProxyUDPDNS       bool         `json:"proxyUdpDns,omitempty"`
+	DiagnosticLogging bool         `json:"diagnosticLogging,omitempty"`
+	Rules             []routerRule `json:"rules"`
 }
 
 type routerProxy struct {
@@ -108,8 +124,22 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 	if request.Version != ProtocolVersion {
 		return RulesRequest{}, fmt.Errorf("unsupported process router version: %d", request.Version)
 	}
-	if request.ProxyPort != ProxyPort {
-		return RulesRequest{}, fmt.Errorf("proxy port must be %d", ProxyPort)
+	if request.Platform == "" {
+		// Protocol v1 Windows clients did not send a platform field.
+		request.Platform = runtime.GOOS
+		if request.Platform != "windows" && request.Platform != "linux" {
+			request.Platform = "windows"
+		}
+	}
+	if request.Platform != "windows" && request.Platform != "linux" {
+		return RulesRequest{}, fmt.Errorf("unsupported process router platform: %s", request.Platform)
+	}
+	expectedPort := WindowsProxyPort
+	if request.Platform == "linux" {
+		expectedPort = LinuxProxyPort
+	}
+	if request.ProxyPort != expectedPort {
+		return RulesRequest{}, fmt.Errorf("proxy port must be %d on %s", expectedPort, request.Platform)
 	}
 	if !request.FailClosed {
 		return RulesRequest{}, errors.New("fail_closed must be true")
@@ -126,10 +156,13 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 	totalPathBytes := 0
 	for index := range rules {
 		rule := &rules[index]
-		if err := validateRule(*rule); err != nil {
+		if err := validateRule(*rule, request.Platform); err != nil {
 			return RulesRequest{}, fmt.Errorf("invalid rule %d: %w", index+1, err)
 		}
-		pathKey := strings.ToLower(rule.ExecutablePath)
+		pathKey := rule.ExecutablePath
+		if request.Platform == "windows" {
+			pathKey = strings.ToLower(pathKey)
+		}
 		if _, exists := ids[rule.ID]; exists {
 			return RulesRequest{}, errors.New("rule IDs must be unique")
 		}
@@ -153,14 +186,22 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 	return request, nil
 }
 
-func validateRule(rule Rule) error {
+func validateRule(rule Rule, platform string) error {
 	if rule.ID == "" || len(rule.ID) > 128 {
 		return errors.New("invalid rule ID")
 	}
-	if !validWindowsExecutablePath(rule.ExecutablePath) {
-		return errors.New("executable_path must be an absolute canonical Windows .exe path")
+	name := ""
+	if platform == "linux" {
+		if !validLinuxExecutablePath(rule.ExecutablePath) {
+			return errors.New("executable_path must be an absolute canonical Linux executable path")
+		}
+		name = path.Base(rule.ExecutablePath)
+	} else {
+		if !validWindowsExecutablePath(rule.ExecutablePath) {
+			return errors.New("executable_path must be an absolute canonical Windows .exe path")
+		}
+		name = windowsBaseName(rule.ExecutablePath)
 	}
-	name := windowsBaseName(rule.ExecutablePath)
 	if name == "" || !strings.EqualFold(name, rule.ExecutableName) {
 		return errors.New("executable_name does not match executable_path")
 	}
@@ -177,6 +218,16 @@ func validateRule(rule Rule) error {
 		return errors.New("priority is out of range")
 	}
 	return nil
+}
+
+func validLinuxExecutablePath(value string) bool {
+	if value == "" || len([]byte(value)) > maxPathBytes || strings.ContainsRune(value, '\x00') {
+		return false
+	}
+	if !strings.HasPrefix(value, "/") || path.Clean(value) != value || value == "/" {
+		return false
+	}
+	return !strings.ContainsAny(value, "*?;,\r\n")
 }
 
 func validWindowsExecutablePath(value string) bool {
@@ -255,11 +306,13 @@ func buildRouterCommand(request RulesRequest, proxyAvailable bool) routerCommand
 		})
 	}
 	return routerCommand{
-		Version:    ProtocolVersion,
-		Command:    "replace_rules",
-		Proxy:      routerProxy{Host: "127.0.0.1", Port: ProxyPort},
-		FailClosed: true,
-		Rules:      rules,
+		Version:           ProtocolVersion,
+		Command:           "replace_rules",
+		Proxy:             routerProxy{Host: "127.0.0.1", Port: request.ProxyPort},
+		FailClosed:        true,
+		ProxyUDPDNS:       request.ProxyUDPDNS,
+		DiagnosticLogging: request.DiagnosticLogging,
+		Rules:             rules,
 	}
 }
 

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -39,10 +41,22 @@ func (f *fakeFirewall) Remove() error {
 
 func validRequest() RulesRequest {
 	return RulesRequest{
-		Version: ProtocolVersion, ProxyPort: ProxyPort, FailClosed: true,
+		Version: ProtocolVersion, Platform: "windows", ProxyPort: WindowsProxyPort, FailClosed: true,
 		Rules: []Rule{{
 			ID: "discord", ExecutablePath: `C:\Program Files\Discord\Discord.exe`,
 			ExecutableName: "Discord.exe", Protocol: "both", Action: "proxy",
+			Enabled: true, Priority: 1,
+		}},
+	}
+}
+
+func linuxRequest() RulesRequest {
+	return RulesRequest{
+		Version: ProtocolVersion, Platform: "linux", ProxyPort: LinuxProxyPort, FailClosed: true,
+		ProxyUDPDNS: true, DiagnosticLogging: true,
+		Rules: []Rule{{
+			ID: "firefox", ExecutablePath: "/usr/lib/firefox/firefox",
+			ExecutableName: "firefox", Protocol: "both", Action: "proxy",
 			Enabled: true, Priority: 1,
 		}},
 	}
@@ -55,6 +69,48 @@ func TestNormalizeRulesRequest(t *testing.T) {
 	}
 	if len(request.Rules) != 1 || request.Rules[0].ExecutableName != "Discord.exe" {
 		t.Fatalf("unexpected normalized request: %#v", request)
+	}
+}
+
+func TestNormalizeRulesRequestDefaultsPlatformToServer(t *testing.T) {
+	request := validRequest()
+	if runtime.GOOS == "linux" {
+		request = linuxRequest()
+	}
+	request.Platform = ""
+	normalized, err := normalizeRulesRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := runtime.GOOS
+	if expected != "windows" && expected != "linux" {
+		expected = "windows"
+	}
+	if normalized.Platform != expected {
+		t.Fatalf("unexpected default platform: got %s, want %s", normalized.Platform, expected)
+	}
+}
+
+func TestNormalizeLinuxRulesRequest(t *testing.T) {
+	request, err := normalizeRulesRequest(linuxRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.ProxyPort != LinuxProxyPort || !request.ProxyUDPDNS || !request.DiagnosticLogging {
+		t.Fatalf("unexpected normalized Linux request: %#v", request)
+	}
+	for _, executablePath := range []string{
+		"usr/bin/firefox",
+		"/usr/../bin/firefox",
+		"/usr/bin/fire*",
+		"/opt/kokorobox/kokorobox",
+	} {
+		invalid := linuxRequest()
+		invalid.Rules[0].ExecutablePath = executablePath
+		invalid.Rules[0].ExecutableName = path.Base(executablePath)
+		if _, err := normalizeRulesRequest(invalid); err == nil {
+			t.Fatalf("expected Linux path to be rejected: %s", executablePath)
+		}
 	}
 }
 
@@ -103,6 +159,24 @@ func TestProxyRulesBecomeBlockWhenMihomoIsUnavailable(t *testing.T) {
 	if len(payload) == 0 {
 		t.Fatal("expected native router command")
 	}
+	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7891},"failClosed":true,"rules":[{"executablePath":"C:\\Program Files\\Discord\\Discord.exe","protocol":"BOTH","action":"BLOCK","enabled":true,"priority":1}]}` {
+		t.Fatalf("unexpected router command payload: %s", payload)
+	}
+}
+
+func TestLinuxRouterCommandIncludesOptionalFlagsWhenEnabled(t *testing.T) {
+	request, err := normalizeRulesRequest(linuxRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := buildRouterCommand(request, true)
+	payload, err := json.Marshal(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7894},"failClosed":true,"proxyUdpDns":true,"diagnosticLogging":true,"rules":[{"executablePath":"/usr/lib/firefox/firefox","protocol":"BOTH","action":"PROXY","enabled":true,"priority":1}]}` {
+		t.Fatalf("unexpected Linux router command payload: %s", payload)
+	}
 }
 
 func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
@@ -123,7 +197,7 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	port := listener.Addr().(*net.TCPAddr).Port
-	if !probeMihomo(port) {
+	if !probeMihomo(port, true) {
 		t.Fatal("expected a valid SOCKS5 greeting")
 	}
 
@@ -144,7 +218,7 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	invalidPort := invalidListener.Addr().(*net.TCPAddr).Port
-	if probeMihomo(invalidPort) {
+	if probeMihomo(invalidPort, true) {
 		t.Fatal("accepted an invalid SOCKS5 greeting")
 	}
 }
