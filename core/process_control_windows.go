@@ -46,7 +46,7 @@ func setProcessPriority(pid int32, priority string) error {
 		"PRIORITY_ABOVE_NORMAL": windows.ABOVE_NORMAL_PRIORITY_CLASS,
 	}[priority]
 	if !ok {
-		return fmt.Errorf("不支持的进程优先级: %s", priority)
+		return fmt.Errorf("Unsupported process priority: %s", priority)
 	}
 
 	handle, err := windows.OpenProcess(windows.PROCESS_SET_INFORMATION, false, uint32(pid))

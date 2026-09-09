@@ -93,7 +93,7 @@ func configureSysproxyGuard(r *http.Request, enabled bool, mode sysproxyGuardMod
 func configureSysproxyGuardBestEffort(r *http.Request, enabled bool, mode sysproxyGuardMode, opts *sysproxy.Options) {
 	if err := configureSysproxyGuard(r, enabled, mode, opts); err != nil {
 		log.Printf("系统代理已设置，但系统代理守护启动失败：%v", err)
-		publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, mode, false, "系统代理守护启动失败，已停止", err)
+		publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, mode, false, "Failed to start system proxy guard; it has stopped", err)
 	}
 }
 
@@ -121,8 +121,8 @@ func (s *sysproxyGuardState) start(config *sysproxyGuardConfig) {
 		oldCancel()
 	}
 
-	log.Printf("系统代理守护已启动：%s", config.mode)
-	publishSysproxyGuardEvent(sysproxyEventGuardStarted, config.mode, true, "系统代理守护已启动", nil)
+	log.Printf("System proxy guard started：%s", config.mode)
+	publishSysproxyGuardEvent(sysproxyEventGuardStarted, config.mode, true, "System proxy guard started", nil)
 	go s.run(ctx, generation, config)
 }
 
@@ -135,8 +135,8 @@ func (s *sysproxyGuardState) stop() {
 
 	if cancel != nil {
 		cancel()
-		log.Println("系统代理守护已停止")
-		publishSysproxyGuardEvent(sysproxyEventGuardStopped, "", false, "系统代理守护已停止", nil)
+		log.Println("System proxy guard stopped")
+		publishSysproxyGuardEvent(sysproxyEventGuardStopped, "", false, "System proxy guard stopped", nil)
 	}
 }
 
@@ -183,8 +183,8 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 				if !s.active(generation) {
 					return nil
 				}
-				log.Println("系统代理守护检测到代理设置被修改，正在恢复")
-				publishSysproxyGuardEvent(sysproxyEventGuardChanged, config.mode, true, "系统代理守护检测到代理设置被修改", nil)
+				log.Println("System proxy guard detected proxy settings were changed，正在恢复")
+				publishSysproxyGuardEvent(sysproxyEventGuardChanged, config.mode, true, "System proxy guard detected proxy settings were changed", nil)
 				if err := config.runner.Apply(config.mode, config.opts); err != nil {
 					return err
 				}
@@ -211,7 +211,7 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 				continue
 			}
 			if restored {
-				publishSysproxyGuardEvent(sysproxyEventGuardRestored, config.mode, true, "系统代理守护已恢复代理设置", nil)
+				publishSysproxyGuardEvent(sysproxyEventGuardRestored, config.mode, true, "System proxy guard restored proxy settings", nil)
 			}
 		}
 

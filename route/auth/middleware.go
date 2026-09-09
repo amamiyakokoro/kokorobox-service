@@ -87,18 +87,18 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		km := GetKeyManager()
 		if !km.IsInitialized() || !km.HasAuthorizedPrincipal() {
-			httphelper.SendError(w, httphelper.ServiceUnavailable("服务未初始化"))
+			httphelper.SendError(w, httphelper.ServiceUnavailable("Service is not initialized"))
 			return
 		}
 
 		if err := km.VerifyRequestPrincipal(r); err != nil {
-			httphelper.SendError(w, httphelper.Forbidden(fmt.Sprintf("请求方未授权: %v", err)))
+			httphelper.SendError(w, httphelper.Forbidden(fmt.Sprintf("Requestor is not authorized: %v", err)))
 			return
 		}
 
 		version := r.Header.Get("X-Auth-Version")
 		if version != authVersionV2 && version != authVersionV3 {
-			httphelper.SendError(w, httphelper.Unauthorized("仅支持 Auth V2/V3"))
+			httphelper.SendError(w, httphelper.Unauthorized("Only Auth V2/V3 is supported"))
 			return
 		}
 		err := authenticateRequest(r, km, version)
@@ -123,12 +123,12 @@ func authenticateRequest(r *http.Request, km *KeyManager, version string) error 
 	signature := r.Header.Get("X-Signature")
 
 	if timestamp == "" || keyID == "" || nonce == "" || contentHash == "" || signature == "" {
-		return httphelper.Unauthorized("缺少认证信息")
+		return httphelper.Unauthorized("Missing authentication information")
 	}
 
 	ts, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
-		return httphelper.BadRequest("无效的时间戳格式")
+		return httphelper.BadRequest("Invalid timestamp format")
 	}
 
 	requestTime := time.UnixMilli(ts)
@@ -136,7 +136,7 @@ func authenticateRequest(r *http.Request, km *KeyManager, version string) error 
 	timeDiff := now.Sub(requestTime)
 
 	if timeDiff < -maxTimestampDriftV2 || timeDiff > maxTimestampDriftV2 {
-		return httphelper.Unauthorized("请求已过期或时间戳无效")
+		return httphelper.Unauthorized("Request expired or timestamp is invalid")
 	}
 
 	bodyHash, err := hashRequestBody(r)
@@ -144,7 +144,7 @@ func authenticateRequest(r *http.Request, km *KeyManager, version string) error 
 		return err
 	}
 	if bodyHash != contentHash {
-		return httphelper.Unauthorized("请求体摘要不匹配")
+		return httphelper.Unauthorized("Request body digest does not match")
 	}
 
 	canonical, err := buildCanonicalRequest(r, timestamp, nonce, keyID, bodyHash, version)
@@ -158,7 +158,7 @@ func authenticateRequest(r *http.Request, km *KeyManager, version string) error 
 
 	nonceKey := keyID + ":" + timestamp + ":" + nonce
 	if !requestNonceStore.Remember(nonceKey, now) {
-		return httphelper.Conflict("请求已重放")
+		return httphelper.Conflict("Request has already been replayed")
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func hashRequestBody(r *http.Request) (string, error) {
 	if r.Body != nil {
 		rawBody, err := io.ReadAll(r.Body)
 		if err != nil {
-			return "", fmt.Errorf("读取请求体失败： %w", err)
+			return "", fmt.Errorf("Failed to read request body:  %w", err)
 		}
 		body = rawBody
 		r.Body = io.NopCloser(bytes.NewReader(rawBody))
@@ -188,7 +188,7 @@ func buildCanonicalRequest(r *http.Request, timestamp string, nonce string, keyI
 
 	query, err := canonicalizeQuery(r.URL.RawQuery)
 	if err != nil {
-		return "", fmt.Errorf("规范化请求参数失败： %w", err)
+		return "", fmt.Errorf("Failed to normalize request parameters:  %w", err)
 	}
 
 	path := r.URL.EscapedPath()
@@ -215,7 +215,7 @@ func canonicalDomain(version string) (string, error) {
 	case authVersionV3:
 		return "KOKOROBOX-AUTH-V3", nil
 	default:
-		return "", fmt.Errorf("不支持的认证版本: %s", version)
+		return "", fmt.Errorf("Unsupported authentication version: %s", version)
 	}
 }
 

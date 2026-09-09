@@ -37,7 +37,7 @@ func setProcessPriority(pid int32, priority string) error {
 		"PRIORITY_HIGHEST":      -20,
 	}[priority]
 	if !ok {
-		return fmt.Errorf("不支持的进程优先级: %s", priority)
+		return fmt.Errorf("Unsupported process priority: %s", priority)
 	}
 
 	return syscall.Setpriority(syscall.PRIO_PROCESS, int(pid), nice)

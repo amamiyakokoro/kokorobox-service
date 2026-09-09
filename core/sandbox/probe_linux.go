@@ -23,12 +23,12 @@ func Probe() error {
 
 func runProbe() error {
 	if os.Geteuid() != 0 {
-		return fmt.Errorf("需要 root 权限")
+		return fmt.Errorf("Root privileges are required")
 	}
 
 	executable, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("读取 service 可执行文件路径失败：%w", err)
+		return fmt.Errorf("Failed to read service executable path: %w", err)
 	}
 	command, err := NewCommand(Config{
 		ExecutablePath: executable,

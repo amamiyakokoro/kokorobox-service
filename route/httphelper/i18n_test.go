@@ -9,7 +9,7 @@ import (
 
 func TestLocaleMiddlewareUsesAcceptLanguage(t *testing.T) {
 	handler := LocaleMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		SendJSON(w, "success", "核心启动成功")
+		SendJSON(w, "success", "Core started successfully")
 	}))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Accept-Language", "zh-TW")
@@ -31,7 +31,7 @@ func TestLocaleMiddlewareUsesAcceptLanguage(t *testing.T) {
 
 func TestLocaleMiddlewareDefaultsToEnglish(t *testing.T) {
 	handler := LocaleMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		SendJSON(w, "success", "核心启动成功")
+		SendJSON(w, "success", "Core started successfully")
 	}))
 	recorder := httptest.NewRecorder()
 
@@ -42,6 +42,28 @@ func TestLocaleMiddlewareDefaultsToEnglish(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got, want := response.Message, "Core started successfully"; got != want {
+		t.Errorf("message = %q, want %q", got, want)
+	}
+}
+
+func TestLocaleMiddlewareSupportsSimplifiedChinese(t *testing.T) {
+	handler := LocaleMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		SendJSON(w, "success", "Core started successfully")
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Language", "zh-CN")
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, req)
+
+	if got, want := recorder.Header().Get("Content-Language"), "zh-CN"; got != want {
+		t.Fatalf("Content-Language = %q, want %q", got, want)
+	}
+	var response Response
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := response.Message, "核心启动成功"; got != want {
 		t.Errorf("message = %q, want %q", got, want)
 	}
 }

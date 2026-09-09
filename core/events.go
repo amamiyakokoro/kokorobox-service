@@ -53,7 +53,7 @@ func (cm *CoreManager) SubscribeEvents(buffer int) (<-chan CoreEvent, func()) {
 	cm.eventHub.mutex.Unlock()
 
 	if last.Type == "" {
-		last = cm.newCoreEvent(CoreEventStopped, "核心未运行", nil, 0, 0)
+		last = cm.newCoreEvent(CoreEventStopped, "Core is not running", nil, 0, 0)
 	}
 	ch <- last
 

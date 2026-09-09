@@ -47,19 +47,19 @@ func stageServiceExecutable(source string) (string, error) {
 
 	dir := filepath.Join("/run", "kokorobox", "service", hash)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("创建服务运行目录失败：%w", err)
+		return "", fmt.Errorf("Failed to create service runtime directory: %w", err)
 	}
 
 	target := filepath.Join(dir, filepath.Base(source))
 	if _, err := os.Stat(target); err == nil {
 		return target, nil
 	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("检查服务运行副本失败：%w", err)
+		return "", fmt.Errorf("Failed to check service runtime copy: %w", err)
 	}
 
 	tmp, err := os.CreateTemp(dir, ".kokorobox-service-*")
 	if err != nil {
-		return "", fmt.Errorf("创建服务运行副本失败：%w", err)
+		return "", fmt.Errorf("Failed to create service runtime copy: %w", err)
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
@@ -67,7 +67,7 @@ func stageServiceExecutable(source string) (string, error) {
 	input, err := os.Open(source)
 	if err != nil {
 		_ = tmp.Close()
-		return "", fmt.Errorf("打开服务二进制失败：%w", err)
+		return "", fmt.Errorf("Failed to open service binary: %w", err)
 	}
 	_, copyErr := io.Copy(tmp, input)
 	closeInputErr := input.Close()
@@ -76,9 +76,9 @@ func stageServiceExecutable(source string) (string, error) {
 
 	switch {
 	case copyErr != nil:
-		return "", fmt.Errorf("复制服务二进制失败：%w", copyErr)
+		return "", fmt.Errorf("Failed to copy service binary: %w", copyErr)
 	case closeInputErr != nil:
-		return "", fmt.Errorf("关闭服务二进制失败：%w", closeInputErr)
+		return "", fmt.Errorf("Failed to close service binary: %w", closeInputErr)
 	case chmodErr != nil:
 		return "", fmt.Errorf("设置服务运行副本权限失败：%w", chmodErr)
 	case closeTmpErr != nil:
@@ -86,7 +86,7 @@ func stageServiceExecutable(source string) (string, error) {
 	}
 
 	if err := os.Rename(tmpPath, target); err != nil {
-		return "", fmt.Errorf("发布服务运行副本失败：%w", err)
+		return "", fmt.Errorf("Failed to publish service runtime copy: %w", err)
 	}
 	return target, nil
 }
@@ -94,7 +94,7 @@ func stageServiceExecutable(source string) (string, error) {
 func hashFile(path string) (string, os.FileMode, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", 0, fmt.Errorf("打开服务二进制失败：%w", err)
+		return "", 0, fmt.Errorf("Failed to open service binary: %w", err)
 	}
 	defer file.Close()
 
@@ -103,7 +103,7 @@ func hashFile(path string) (string, os.FileMode, error) {
 		return "", 0, fmt.Errorf("读取服务二进制信息失败：%w", err)
 	}
 	if info.IsDir() {
-		return "", 0, fmt.Errorf("服务路径指向目录而非可执行文件: %s", path)
+		return "", 0, fmt.Errorf("Service path points to a directory, not an executable: %s", path)
 	}
 
 	hash := sha256.New()

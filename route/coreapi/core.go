@@ -88,7 +88,7 @@ func coreSaveProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	cm.ApplyLaunchProfile(normalized, coreLaunchOptions(r)...)
 
-	httphelper.SendJSON(w, "success", "核心启动配置已更新")
+	httphelper.SendJSON(w, "success", "Core launch configuration updated")
 }
 
 func corePatchProfile(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func corePatchProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	cm.ApplyLaunchProfile(profile, coreLaunchOptions(r)...)
 
-	httphelper.SendJSON(w, "success", "核心启动配置已更新")
+	httphelper.SendJSON(w, "success", "Core launch configuration updated")
 }
 
 func coreStart(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +126,7 @@ func coreStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendCoreReady(w, r, "核心启动成功")
+	sendCoreReady(w, r, "Core started successfully")
 }
 
 func coreStop(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +134,7 @@ func coreStop(w http.ResponseWriter, r *http.Request) {
 		httphelper.SendError(w, err)
 		return
 	}
-	httphelper.SendJSON(w, "success", "核心停止成功")
+	httphelper.SendJSON(w, "success", "Core stopped successfully")
 }
 
 func coreRestart(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func coreRestart(w http.ResponseWriter, r *http.Request) {
 		httphelper.SendError(w, err)
 		return
 	}
-	sendCoreReady(w, r, "核心重启成功")
+	sendCoreReady(w, r, "Core restarted successfully")
 }
 
 func decodeOptionalLaunchProfile(r *http.Request) (*corepkg.LaunchProfile, bool, error) {

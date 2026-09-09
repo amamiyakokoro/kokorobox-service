@@ -117,11 +117,11 @@ func RequestLogger(next http.Handler) http.Handler {
 
 		switch {
 		case status >= http.StatusInternalServerError:
-			log.S().Errorw("HTTP 请求完成", fields...)
+			log.S().Errorw("HTTP request completed", fields...)
 		case status >= http.StatusBadRequest:
-			log.S().Warnw("HTTP 请求完成", fields...)
+			log.S().Warnw("HTTP request completed", fields...)
 		default:
-			log.S().Infow("HTTP 请求完成", fields...)
+			log.S().Infow("HTTP request completed", fields...)
 		}
 	})
 }
@@ -156,7 +156,7 @@ func SendJSONWithStatus(w http.ResponseWriter, statusCode int, status string, me
 		Message: i18n.Text(locale, message),
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("编码 HTTP JSON 响应失败：%v", err)
+		log.Printf("Failed to encode HTTP JSON response: %v", err)
 	}
 }
 

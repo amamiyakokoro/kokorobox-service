@@ -82,10 +82,10 @@ func InitKeyManager(keyDir string) error {
 func validateKeyID(keyID string) (string, error) {
 	normalized := strings.TrimSpace(keyID)
 	if normalized == "" {
-		return "", fmt.Errorf("密钥 ID 不能为空")
+		return "", fmt.Errorf("Key ID cannot be empty")
 	}
 	if len(normalized) > 128 {
-		return "", fmt.Errorf("密钥 ID 过长")
+		return "", fmt.Errorf("Key ID is too long")
 	}
 
 	for _, ch := range normalized {
@@ -95,7 +95,7 @@ func validateKeyID(keyID string) (string, error) {
 		case ch >= '0' && ch <= '9':
 		case ch == '-', ch == '_', ch == '.':
 		default:
-			return "", fmt.Errorf("密钥 ID 格式无效")
+			return "", fmt.Errorf("Invalid key ID format")
 		}
 	}
 
@@ -105,7 +105,7 @@ func validateKeyID(keyID string) (string, error) {
 func computeKeyID(pubKeyBase64 string) (string, error) {
 	keyBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(pubKeyBase64))
 	if err != nil {
-		return "", fmt.Errorf("公钥 base64 解码失败： %w", err)
+		return "", fmt.Errorf("Failed to decode public key Base64:  %w", err)
 	}
 
 	sum := sha256.Sum256(keyBytes)
@@ -115,22 +115,22 @@ func computeKeyID(pubKeyBase64 string) (string, error) {
 func parsePublicKey(pubKeyBase64 string) (string, ed25519.PublicKey, error) {
 	normalized := strings.TrimSpace(pubKeyBase64)
 	if normalized == "" {
-		return "", nil, fmt.Errorf("公钥不能为空")
+		return "", nil, fmt.Errorf("Public key cannot be empty")
 	}
 
 	pubKeyBytes, err := base64.StdEncoding.DecodeString(normalized)
 	if err != nil {
-		return "", nil, fmt.Errorf("公钥 base64 解码失败： %w", err)
+		return "", nil, fmt.Errorf("Failed to decode public key Base64:  %w", err)
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 	if err != nil {
-		return "", nil, fmt.Errorf("解析公钥失败： %w", err)
+		return "", nil, fmt.Errorf("Failed to parse public key:  %w", err)
 	}
 
 	edPub, ok := pub.(ed25519.PublicKey)
 	if !ok {
-		return "", nil, fmt.Errorf("公钥不是 Ed25519 类型")
+		return "", nil, fmt.Errorf("Public key is not an Ed25519 key")
 	}
 
 	return normalized, edPub, nil
@@ -175,7 +175,7 @@ func normalizeStoredPublicKey(stored *storedPublicKey) (*storedPublicKey, error)
 			return nil, err
 		}
 		if keyID != computedKeyID {
-			return nil, fmt.Errorf("密钥 ID 与公钥不匹配")
+			return nil, fmt.Errorf("Key ID does not match public key")
 		}
 	}
 
@@ -239,7 +239,7 @@ func (km *KeyManager) loadLegacyPublicKeyLocked() (*storedPublicKey, error) {
 	}
 
 	if _, err := x509.ParsePKIXPublicKey(block.Bytes); err != nil {
-		return nil, fmt.Errorf("解析公钥失败： %w", err)
+		return nil, fmt.Errorf("Failed to parse public key:  %w", err)
 	}
 
 	publicKey := base64.StdEncoding.EncodeToString(block.Bytes)
@@ -263,7 +263,7 @@ func (km *KeyManager) loadPublicKeys() error {
 	case err == nil:
 		var ring keyRing
 		if err := json.Unmarshal(data, &ring); err != nil {
-			return fmt.Errorf("解析公钥失败： %w", err)
+			return fmt.Errorf("Failed to parse public key:  %w", err)
 		}
 
 		currentKey, err := normalizeStoredPublicKey(ring.Current)
@@ -353,7 +353,7 @@ func (km *KeyManager) SetPublicKey(pubKeyBase64 string) (bool, error) {
 
 func validateAuthorizedPrincipal(principal *AuthorizedPrincipal) error {
 	if principal == nil {
-		return fmt.Errorf("授权主体为空")
+		return fmt.Errorf("Authorized principal is empty")
 	}
 
 	principal.Type = strings.TrimSpace(principal.Type)
@@ -362,17 +362,17 @@ func validateAuthorizedPrincipal(principal *AuthorizedPrincipal) error {
 	switch principal.Type {
 	case "uid":
 		if principal.Value == "" {
-			return fmt.Errorf("UID 不能为空")
+			return fmt.Errorf("UID cannot be empty")
 		}
 		if _, err := strconv.ParseUint(principal.Value, 10, 32); err != nil {
 			return fmt.Errorf("UID 格式无效： %w", err)
 		}
 	case "sid":
 		if principal.Value == "" {
-			return fmt.Errorf("SID 不能为空")
+			return fmt.Errorf("SID cannot be empty")
 		}
 		if !strings.HasPrefix(principal.Value, "S-") {
-			return fmt.Errorf("SID 格式无效")
+			return fmt.Errorf("Invalid SID format")
 		}
 	default:
 		return fmt.Errorf("不支持的授权主体类型: %s", principal.Type)
@@ -432,7 +432,7 @@ func (km *KeyManager) loadAuthorizedPrincipal() error {
 	data, err := os.ReadFile(km.principalPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("授权主体文件不存在（未绑定请求方身份）")
+			return fmt.Errorf("Authorized principal file does not exist (requestor identity is not bound)")
 		}
 		return fmt.Errorf("读取授权主体文件失败： %w", err)
 	}
@@ -461,16 +461,16 @@ func (km *KeyManager) VerifySignature(keyID string, message string, signature st
 	km.mu.RUnlock()
 
 	if publicKey == nil {
-		return fmt.Errorf("密钥 ID 未注册")
+		return fmt.Errorf("Key ID is not registered")
 	}
 
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
-		return fmt.Errorf("签名解码失败： %w", err)
+		return fmt.Errorf("Failed to decode signature:  %w", err)
 	}
 
 	if !ed25519.Verify(publicKey, []byte(message), sig) {
-		return fmt.Errorf("签名验证失败")
+		return fmt.Errorf("Signature verification failed")
 	}
 
 	return nil
@@ -529,13 +529,13 @@ func (km *KeyManager) VerifyRequestPrincipal(r *http.Request) error {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("当前请求未携带可识别的本地身份信息")
+		return fmt.Errorf("Request does not carry a recognizable local identity")
 	}
 	if requestType != principal.Type {
-		return fmt.Errorf("请求方身份类型不匹配")
+		return fmt.Errorf("Requestor identity type does not match")
 	}
 	if requestValue != principal.Value {
-		return fmt.Errorf("请求方身份不匹配")
+		return fmt.Errorf("Requestor identity does not match")
 	}
 
 	return nil

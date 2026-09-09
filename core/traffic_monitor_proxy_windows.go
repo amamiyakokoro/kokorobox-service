@@ -42,7 +42,7 @@ func startTrafficMonitorProxy(launch *launchSession, sddl string) (func(), error
 			log.Printf("TrafficMonitor 兼容 pipe 服务异常退出: %v", err)
 		}
 	}()
-	log.Printf("TrafficMonitor 兼容 pipe 监听地址: %s", listener.Addr().String())
+	log.Printf("TrafficMonitor 兼容 pipe Listen address: %s", listener.Addr().String())
 
 	return func() {
 		if err := server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {

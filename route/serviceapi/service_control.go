@@ -23,11 +23,11 @@ func Router() http.Handler {
 }
 
 func serviceStop(w http.ResponseWriter, r *http.Request) {
-	controlServiceAsync(w, "stop", "服务停止中...", func() error { return serviceController.Stop() })
+	controlServiceAsync(w, "stop", "Service is stopping...", func() error { return serviceController.Stop() })
 }
 
 func serviceRestart(w http.ResponseWriter, r *http.Request) {
-	controlServiceAsync(w, "restart", "服务重启中...", func() error { return serviceController.Restart() })
+	controlServiceAsync(w, "restart", "Service is restarting...", func() error { return serviceController.Restart() })
 }
 
 func controlServiceAsync(w http.ResponseWriter, action string, message string, fn func() error) {
@@ -38,12 +38,12 @@ func controlServiceAsync(w http.ResponseWriter, action string, message string, f
 	}
 
 	if action == "stop" && status == appservice.StatusStopped {
-		httphelper.SendJSON(w, "success", "服务已停止")
+		httphelper.SendJSON(w, "success", "Service is stopped")
 		return
 	}
 
 	if action == "restart" && status == appservice.StatusStopped {
-		httphelper.SendError(w, httphelper.Conflict("服务未运行"))
+		httphelper.SendError(w, httphelper.Conflict("Service is not running"))
 		return
 	}
 

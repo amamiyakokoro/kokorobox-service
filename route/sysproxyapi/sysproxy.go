@@ -101,7 +101,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 		status = result
 		return nil
 	})
-	logSysproxyOperation("query_status", "查询代理设置完成", "查询代理设置失败", t, err, sysproxyOptionLogFields(opts)...)
+	logSysproxyOperation("query_status", "Queried proxy settings", "Failed to query proxy settings", t, err, sysproxyOptionLogFields(opts)...)
 	if err != nil {
 		httphelper.SendError(w, err)
 		return
@@ -112,7 +112,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 func pac(w http.ResponseWriter, r *http.Request) {
 	var req proxyRequest
 	if err := httphelper.DecodeRequest(r, &req); err != nil {
-		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("无效的请求体: %v", err)))
+		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("Invalid request body: %v", err)))
 		return
 	}
 
@@ -133,7 +133,7 @@ func pac(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 	})
-	logSysproxyOperation("set_pac", "设置 PAC 完成", "设置 PAC 失败", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
+	logSysproxyOperation("set_pac", "PAC settings updated", "Failed to update PAC settings", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
 	if err != nil {
 		httphelper.SendError(w, err)
 		return
@@ -144,7 +144,7 @@ func pac(w http.ResponseWriter, r *http.Request) {
 func proxy(w http.ResponseWriter, r *http.Request) {
 	var req proxyRequest
 	if err := httphelper.DecodeRequest(r, &req); err != nil {
-		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("无效的请求体: %v", err)))
+		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("Invalid request body: %v", err)))
 		return
 	}
 
@@ -166,7 +166,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 			return nil
 		})
 	})
-	logSysproxyOperation("set_proxy", "设置代理完成", "设置代理失败", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
+	logSysproxyOperation("set_proxy", "Proxy settings updated", "Failed to update proxy settings", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
 	if err != nil {
 		httphelper.SendError(w, err)
 		return
@@ -177,7 +177,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 func disable(w http.ResponseWriter, r *http.Request) {
 	var req proxyRequest
 	if err := httphelper.DecodeRequest(r, &req); err != nil {
-		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("无效的请求体: %v", err)))
+		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("Invalid request body: %v", err)))
 		return
 	}
 
@@ -193,7 +193,7 @@ func disable(w http.ResponseWriter, r *http.Request) {
 			return sysproxy.DisableProxy(opts)
 		})
 	})
-	logSysproxyOperation("disable_proxy", "禁用代理完成", "禁用代理失败", t, err, sysproxyOptionLogFields(opts)...)
+	logSysproxyOperation("disable_proxy", "Proxy disabled", "Failed to disable proxy", t, err, sysproxyOptionLogFields(opts)...)
 	if err != nil {
 		httphelper.SendError(w, err)
 		return

@@ -3,7 +3,6 @@ package i18n
 
 import (
 	"os"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -13,6 +12,7 @@ type Locale string
 
 const (
 	English            Locale = "en"
+	SimplifiedChinese  Locale = "zh-CN"
 	TraditionalChinese Locale = "zh-TW"
 
 	// Environment selects the process-wide fallback language. HTTP clients may
@@ -24,19 +24,21 @@ var (
 	defaultLocale = Normalize(os.Getenv(Environment))
 	localeMu      sync.RWMutex
 
-	englishReplacer         = newReplacer(englishTerms)
-	traditionalTermReplacer = newReplacer(traditionalTerms)
-	traditionalReplacer     = strings.NewReplacer(traditionalCharacters...)
+	simplifiedCatalog   = buildSimplifiedCatalog(simplifiedSourceTerms)
+	traditionalCatalog  = buildTraditionalCatalog(simplifiedSourceTerms)
+	traditionalReplacer = strings.NewReplacer(traditionalCharacters...)
 )
 
-// Normalize accepts the documented values en and zh-TW, plus compatible
-// Traditional Chinese language tags used by operating systems and HTTP clients.
-// Unknown values fall back to English so a newly installed service is usable
-// without configuration.
+// Normalize accepts the documented values en, zh-CN, and zh-TW, plus
+// compatible language tags used by operating systems and HTTP clients. Unknown
+// values fall back to English so a newly installed service is usable without
+// configuration.
 func Normalize(value string) Locale {
 	value = strings.ToLower(strings.TrimSpace(strings.Split(value, ",")[0]))
 	value = strings.ReplaceAll(value, "_", "-")
 	switch {
+	case value == "zh-cn", value == "zh-hans", strings.HasPrefix(value, "zh-hans-"):
+		return SimplifiedChinese
 	case value == "zh-tw", value == "zh-hant", strings.HasPrefix(value, "zh-hant-"):
 		return TraditionalChinese
 	default:
@@ -52,7 +54,7 @@ func FromAcceptLanguage(value string) Locale {
 			continue
 		}
 		locale := Normalize(tag)
-		if locale == TraditionalChinese || strings.HasPrefix(strings.ToLower(tag), "en") {
+		if locale == SimplifiedChinese || locale == TraditionalChinese || strings.HasPrefix(strings.ToLower(tag), "en") {
 			return locale
 		}
 	}
@@ -74,13 +76,20 @@ func SetDefault(value string) {
 	defaultLocale = Normalize(value)
 }
 
-// Text translates a user-visible message. zh-TW is rendered in Traditional
-// Chinese; English is the default for a missing or unsupported locale.
+// Text translates an English source message. English is the source language
+// and fallback for missing translations.
 func Text(locale Locale, message string) string {
-	if Normalize(string(locale)) == TraditionalChinese {
-		return traditionalReplacer.Replace(traditionalTermReplacer.Replace(message))
+	switch Normalize(string(locale)) {
+	case SimplifiedChinese:
+		if translated, ok := simplifiedCatalog[message]; ok {
+			return translated
+		}
+	case TraditionalChinese:
+		if translated, ok := traditionalCatalog[message]; ok {
+			return translated
+		}
 	}
-	return englishReplacer.Replace(message)
+	return message
 }
 
 // DefaultText translates a message using the process-wide fallback language.
@@ -88,25 +97,36 @@ func DefaultText(message string) string {
 	return Text(Default(), message)
 }
 
-func newReplacer(terms map[string]string) *strings.Replacer {
-	keys := make([]string, 0, len(terms))
-	for key := range terms {
-		keys = append(keys, key)
+func buildSimplifiedCatalog(sourceTerms map[string]string) map[string]string {
+	catalog := make(map[string]string, len(sourceTerms))
+	for simplified, english := range sourceTerms {
+		catalog[english] = simplified
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		return len(keys[i]) > len(keys[j])
-	})
-	pairs := make([]string, 0, len(keys)*2)
-	for _, key := range keys {
-		pairs = append(pairs, key, terms[key])
-	}
-	return strings.NewReplacer(pairs...)
+	return catalog
 }
 
-// Terms are deliberately phrases rather than message IDs. Existing errors are
-// constructed deep in the service, so translating at its CLI, log, and HTTP
-// boundaries keeps error wrapping and API contracts intact during migration.
-var englishTerms = map[string]string{
+func buildTraditionalCatalog(sourceTerms map[string]string) map[string]string {
+	catalog := make(map[string]string, len(sourceTerms))
+	for simplified, english := range sourceTerms {
+		traditional, ok := traditionalTerms[simplified]
+		if !ok {
+			traditional = traditionalReplacer.Replace(simplified)
+		}
+		catalog[english] = traditional
+	}
+	return catalog
+}
+
+// simplifiedSourceTerms is the zh-CN catalog. Its values are English source
+// messages; callers must pass those English values to Text.
+var simplifiedSourceTerms = map[string]string{
+	"输出语言：en、zh-CN 或 zh-TW":                                     "Output language: en, zh-CN, or zh-TW",
+	"错误：必须通过 --public-key 参数提供公钥":                               "Error: a public key must be provided with --public-key",
+	"错误：必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份": "Error: an authorized user identity must be bound with --authorized-sid or --authorized-uid",
+	"查询服务状态失败；如果服务正在运行，请手动执行 'restart' 命令":                      "Failed to query service status; if the service is running, run 'restart' manually",
+	"正在重启服务...": "Restarting service...",
+	"重启服务失败；请手动执行 'kokorobox-service service restart' 命令": "Failed to restart service; run 'kokorobox-service service restart' manually",
+	"服务重启中...":                 "Service is restarting...",
 	"启动 KokoroBox 服务（测试用）":     "Start KokoroBox Service (for testing)",
 	"安装 KokoroBox 服务":          "Install KokoroBox Service",
 	"卸载 KokoroBox 服务":          "Uninstall KokoroBox Service",
@@ -178,6 +198,7 @@ var englishTerms = map[string]string{
 	"设置 PAC 失败":                "Failed to update PAC settings",
 	"设置代理完成":                   "Proxy settings updated",
 	"设置代理失败":                   "Failed to update proxy settings",
+	"设置代理失败：":                  "Failed to update proxy settings: ",
 	"设置 PAC 代理失败：":             "Failed to update PAC proxy settings: ",
 	"禁用代理完成":                   "Proxy disabled",
 	"禁用代理失败":                   "Failed to disable proxy",
@@ -187,9 +208,11 @@ var englishTerms = map[string]string{
 	"取消代理设置失败：":                "Failed to disable proxy settings: ",
 	"格式化 JSON 失败：":             "Failed to format JSON: ",
 	"无效的请求体:":                  "Invalid request body:",
+	"无效的请求体: %v":               "Invalid request body: %v",
 	"无效的请求体：":                  "Invalid request body: ",
 	"服务未初始化":                   "Service is not initialized",
 	"请求方未授权:":                  "Requestor is not authorized:",
+	"请求方未授权: %v":               "Requestor is not authorized: %v",
 	"请求方未授权：":                  "Requestor is not authorized: ",
 	"仅支持 Auth V2/V3":           "Only Auth V2/V3 is supported",
 	"缺少认证信息":                   "Missing authentication information",
@@ -259,6 +282,7 @@ var englishTerms = map[string]string{
 	"不支持的操作系统:":             "Unsupported operating system:",
 	"不支持的进程优先级:":            "Unsupported process priority:",
 	"当前连接不支持 websocket":     "Current connection does not support WebSocket",
+	"转发核心控制器请求失败：%w":        "Failed to forward core controller request: %w",
 	"HTTP 请求完成":             "HTTP request completed",
 	"编码 HTTP JSON 响应失败：":    "Failed to encode HTTP JSON response: ",
 }
@@ -267,72 +291,73 @@ var englishTerms = map[string]string{
 // Traditional conversion, such as 網路 rather than 網絡 and 設定 rather than
 // 設置. Keep these user-facing phrases in a small locale-specific catalog.
 var traditionalTerms = map[string]string{
-	"启动 KokoroBox 服务（测试用）": "啟動 KokoroBox 服務（測試用）",
-	"安装 KokoroBox 服务":      "安裝 KokoroBox 服務",
-	"卸载 KokoroBox 服务":      "解除安裝 KokoroBox 服務",
-	"启动 KokoroBox 服务":      "啟動 KokoroBox 服務",
-	"停止 KokoroBox 服务":      "停止 KokoroBox 服務",
-	"重启 KokoroBox 服务":      "重新啟動 KokoroBox 服務",
-	"查看 KokoroBox 服务状态":    "查看 KokoroBox 服務狀態",
-	"运行 KokoroBox 服务":      "執行 KokoroBox 服務",
-	"管理 KokoroBox 服务":      "管理 KokoroBox 服務",
-	"初始化服务（传入公钥）":          "初始化服務（傳入公鑰）",
-	"管理系统代理设置":             "管理系統代理設定",
-	"设置系统代理":               "設定系統代理",
-	"设置 PAC 代理":            "設定 PAC 代理",
-	"取消代理设置":               "停用代理設定",
-	"查看当前代理设置":             "查看目前代理設定",
-	"仅对活跃的网络设备生效":          "僅對使用中的網路介面生效",
-	"使用注册表设置":              "使用登錄檔設定",
-	"指定网络设备":               "指定網路介面",
-	"监听地址":                 "監聽位址",
-	"代理服务器地址":              "代理伺服器位址",
-	"绕过地址":                 "略過位址",
-	"PAC 地址":               "PAC 網址",
-	"客户端公钥":                "用戶端公鑰",
-	"允许访问服务的 Windows SID":  "允許存取服務的 Windows SID",
-	"允许访问服务的 Unix UID":     "允許存取服務的 Unix UID",
-	"核心启动配置已更新":            "核心啟動設定已更新",
-	"核心启动成功":               "核心啟動成功",
-	"核心停止成功":               "核心已停止",
-	"核心重启成功":               "核心重新啟動成功",
-	"核心未运行":                "核心未執行",
-	"核心正在启动":               "核心正在啟動",
-	"核心已启动":                "核心已啟動",
-	"核心正在停止":               "核心正在停止",
-	"核心已停止":                "核心已停止",
-	"核心正在重启":               "核心正在重新啟動",
-	"核心重启失败":               "核心重新啟動失敗",
-	"核心启动失败":               "核心啟動失敗",
-	"服务安装成功":               "服務安裝成功",
-	"服务卸载成功":               "服務解除安裝成功",
-	"服务启动成功":               "服務啟動成功",
-	"服务停止成功":               "服務停止成功",
-	"服务启动中...":             "服務正在啟動...",
-	"服务停止中...":             "服務正在停止...",
-	"服务已停止":                "服務已停止",
-	"服务未运行":                "服務未執行",
-	"服务状态：运行中":             "服務狀態：執行中",
-	"服务状态：已停止":             "服務狀態：已停止",
-	"服务状态：未知":              "服務狀態：未知",
-	"DNS 设置成功":             "DNS 設定成功",
-	"无效的请求体":               "無效的請求主體",
-	"服务未初始化":               "服務尚未初始化",
-	"请求方未授权":               "請求端未獲授權",
-	"仅支持 Auth V2/V3":       "僅支援 Auth V2/V3",
-	"缺少认证信息":               "缺少驗證資訊",
-	"无效的时间戳格式":             "無效的時間戳記格式",
-	"请求已过期或时间戳无效":          "請求已過期或時間戳記無效",
-	"请求体摘要不匹配":             "請求主體摘要不符",
-	"请求已重放":                "請求已重放",
-	"设置代理失败：":              "設定代理失敗：",
-	"代理设置成功，耗时：":           "代理設定成功，耗時：",
-	"PAC 代理设置成功，耗时：":       "PAC 代理設定成功，耗時：",
-	"代理设置已取消，耗时：":          "已停用代理設定，耗時：",
-	"取消代理设置失败：":            "停用代理設定失敗：",
-	"查询代理设置失败：":            "查詢代理設定失敗：",
-	"格式化 JSON 失败：":         "格式化 JSON 失敗：",
-	"输出语言：en 或 zh-TW":      "輸出語言：en 或 zh-TW",
+	"启动 KokoroBox 服务（测试用）":  "啟動 KokoroBox 服務（測試用）",
+	"安装 KokoroBox 服务":       "安裝 KokoroBox 服務",
+	"卸载 KokoroBox 服务":       "解除安裝 KokoroBox 服務",
+	"启动 KokoroBox 服务":       "啟動 KokoroBox 服務",
+	"停止 KokoroBox 服务":       "停止 KokoroBox 服務",
+	"重启 KokoroBox 服务":       "重新啟動 KokoroBox 服務",
+	"查看 KokoroBox 服务状态":     "查看 KokoroBox 服務狀態",
+	"运行 KokoroBox 服务":       "執行 KokoroBox 服務",
+	"管理 KokoroBox 服务":       "管理 KokoroBox 服務",
+	"初始化服务（传入公钥）":           "初始化服務（傳入公鑰）",
+	"管理系统代理设置":              "管理系統代理設定",
+	"设置系统代理":                "設定系統代理",
+	"设置 PAC 代理":             "設定 PAC 代理",
+	"取消代理设置":                "停用代理設定",
+	"查看当前代理设置":              "查看目前代理設定",
+	"仅对活跃的网络设备生效":           "僅對使用中的網路介面生效",
+	"使用注册表设置":               "使用登錄檔設定",
+	"指定网络设备":                "指定網路介面",
+	"监听地址":                  "監聽位址",
+	"代理服务器地址":               "代理伺服器位址",
+	"绕过地址":                  "略過位址",
+	"PAC 地址":                "PAC 網址",
+	"客户端公钥":                 "用戶端公鑰",
+	"允许访问服务的 Windows SID":   "允許存取服務的 Windows SID",
+	"允许访问服务的 Unix UID":      "允許存取服務的 Unix UID",
+	"核心启动配置已更新":             "核心啟動設定已更新",
+	"核心启动成功":                "核心啟動成功",
+	"核心停止成功":                "核心已停止",
+	"核心重启成功":                "核心重新啟動成功",
+	"核心未运行":                 "核心未執行",
+	"核心正在启动":                "核心正在啟動",
+	"核心已启动":                 "核心已啟動",
+	"核心正在停止":                "核心正在停止",
+	"核心已停止":                 "核心已停止",
+	"核心正在重启":                "核心正在重新啟動",
+	"核心重启失败":                "核心重新啟動失敗",
+	"核心启动失败":                "核心啟動失敗",
+	"服务安装成功":                "服務安裝成功",
+	"服务卸载成功":                "服務解除安裝成功",
+	"服务启动成功":                "服務啟動成功",
+	"服务停止成功":                "服務停止成功",
+	"服务启动中...":              "服務正在啟動...",
+	"服务停止中...":              "服務正在停止...",
+	"服务已停止":                 "服務已停止",
+	"服务未运行":                 "服務未執行",
+	"服务状态：运行中":              "服務狀態：執行中",
+	"服务状态：已停止":              "服務狀態：已停止",
+	"服务状态：未知":               "服務狀態：未知",
+	"DNS 设置成功":              "DNS 設定成功",
+	"无效的请求体":                "無效的請求主體",
+	"服务未初始化":                "服務尚未初始化",
+	"请求方未授权":                "請求端未獲授權",
+	"仅支持 Auth V2/V3":        "僅支援 Auth V2/V3",
+	"缺少认证信息":                "缺少驗證資訊",
+	"无效的时间戳格式":              "無效的時間戳記格式",
+	"请求已过期或时间戳无效":           "請求已過期或時間戳記無效",
+	"请求体摘要不匹配":              "請求主體摘要不符",
+	"请求已重放":                 "請求已重放",
+	"设置代理失败：":               "設定代理失敗：",
+	"代理设置成功，耗时：":            "代理設定成功，耗時：",
+	"PAC 代理设置成功，耗时：":        "PAC 代理設定成功，耗時：",
+	"代理设置已取消，耗时：":           "已停用代理設定，耗時：",
+	"取消代理设置失败：":             "停用代理設定失敗：",
+	"查询代理设置失败：":             "查詢代理設定失敗：",
+	"格式化 JSON 失败：":          "格式化 JSON 失敗：",
+	"输出语言：en 或 zh-TW":       "輸出語言：en 或 zh-TW",
+	"输出语言：en、zh-CN 或 zh-TW": "輸出語言：en、zh-CN 或 zh-TW",
 }
 
 // This character table converts source messages (which historically used

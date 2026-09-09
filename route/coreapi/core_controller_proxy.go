@@ -43,7 +43,7 @@ func coreControllerProxy(w http.ResponseWriter, r *http.Request) {
 		},
 		Transport: transport,
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
-			httphelper.SendError(w, fmt.Errorf("转发核心控制器请求失败：%w", err))
+			httphelper.SendError(w, fmt.Errorf("Failed to forward core controller request: %w", err))
 		},
 	}
 

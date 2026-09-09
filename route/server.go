@@ -171,7 +171,7 @@ func StartHTTP(addr string) error {
 	if err != nil {
 		return fmt.Errorf("http 监听错误：%w", err)
 	}
-	log.Printf("http 监听地址: %s", addr)
+	log.Printf("http Listen address: %s", addr)
 	server := &http.Server{
 		Handler: router(),
 	}
@@ -196,7 +196,7 @@ func StartUnix(addr string) error {
 		_ = l.Close()
 		return fmt.Errorf("设置 unix socket 权限失败：%w", err)
 	}
-	log.Printf("unix 监听地址: %s", l.Addr().String())
+	log.Printf("unix Listen address: %s", l.Addr().String())
 
 	server := &http.Server{
 		Handler: router(),
@@ -218,7 +218,7 @@ func StartPipe(addr string) error {
 	if err != nil {
 		return fmt.Errorf("pipe 监听错误：%w", err)
 	}
-	log.Printf("pipe 监听地址: %s", l.Addr().String())
+	log.Printf("pipe Listen address: %s", l.Addr().String())
 
 	server := &http.Server{
 		Handler: router(),

@@ -54,7 +54,7 @@ func subscribeSysproxyEvents(buffer int) (<-chan sysproxyEvent, func()) {
 	globalSysproxyEvents.mutex.Unlock()
 
 	if last.Type == "" {
-		last = newSysproxyEvent(sysproxyEventGuardStopped, "", false, "系统代理守护未运行", nil)
+		last = newSysproxyEvent(sysproxyEventGuardStopped, "", false, "System proxy guard is not running", nil)
 	}
 	ch <- last
 

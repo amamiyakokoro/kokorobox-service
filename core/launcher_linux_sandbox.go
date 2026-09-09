@@ -17,7 +17,7 @@ type linuxSandboxLauncher struct{}
 func (linuxSandboxLauncher) Command(launch *launchSession) (*coreCommand, error) {
 	serviceExecutable, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("读取 service 可执行文件路径失败：%w", err)
+		return nil, fmt.Errorf("Failed to read service executable path: %w", err)
 	}
 	writableDirs := writableDirsFromCoreArgs(launch.args)
 	if launch.hookUpFile != "" {

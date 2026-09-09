@@ -32,7 +32,7 @@ func (c *coreCommand) cleanupNow() {
 
 func (c *coreCommand) start() (*exec.Cmd, error) {
 	if c == nil || c.cmd == nil {
-		return nil, fmt.Errorf("核心启动命令为空")
+		return nil, fmt.Errorf("Core launch command is empty")
 	}
 
 	firstCmd := c.cmd

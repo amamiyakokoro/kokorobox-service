@@ -11,7 +11,7 @@ func SetDns(device string, servers []string) error {
 	case "darwin":
 		return setDnsDarwin(device, servers)
 	default:
-		return fmt.Errorf("不支持的操作系统: %s", runtime.GOOS)
+		return fmt.Errorf("Unsupported operating system: %s", runtime.GOOS)
 	}
 }
 

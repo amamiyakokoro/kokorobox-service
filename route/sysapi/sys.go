@@ -25,12 +25,12 @@ func Router() http.Handler {
 func setDns(w http.ResponseWriter, r *http.Request) {
 	var req dnsRequest
 	if err := httphelper.DecodeRequest(r, &req); err != nil {
-		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("无效的请求体: %v", err)))
+		httphelper.SendError(w, httphelper.BadRequest(fmt.Sprintf("Invalid request body: %v", err)))
 		return
 	}
 	if err := sys.SetDns(req.Device, req.Servers); err != nil {
 		httphelper.SendError(w, err)
 		return
 	}
-	httphelper.SendJSON(w, "success", "DNS 设置成功")
+	httphelper.SendJSON(w, "success", "DNS settings updated successfully")
 }

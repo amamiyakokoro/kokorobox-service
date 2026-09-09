@@ -10,7 +10,7 @@ import (
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: i18n.DefaultText("启动 KokoroBox 服务（测试用）"),
+	Short: i18n.DefaultText("Start KokoroBox Service (for testing)"),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := route.StartHTTP("127.0.0.1:10002"); err != nil {
 			log.Fatal(err)

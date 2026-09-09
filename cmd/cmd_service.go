@@ -36,12 +36,12 @@ func (p *Program) Start(s kservice.Service) error {
 func (p *Program) run() {
 	logFile, err := log.InitLogging()
 	if err != nil {
-		log.Printf("初始化日志失败：%v\n", err)
+		log.Printf("Failed to initialize logging: %v\n", err)
 	}
 	if logFile != nil {
 		defer logFile.Close()
 	}
-	log.Println("服务启动中...")
+	log.Println("Service is starting...")
 
 	if err := route.Start(p.listen); err != nil {
 		log.Fatal(err)
@@ -49,12 +49,12 @@ func (p *Program) run() {
 }
 
 func (p *Program) Stop(s kservice.Service) error {
-	log.Println("服务停止中...")
+	log.Println("Service is stopping...")
 	if err := route.Stop(); err != nil {
-		log.Printf("服务停止清理失败：%v", err)
+		log.Printf("Service stop cleanup failed: %v", err)
 		return err
 	}
-	log.Println("服务已停止")
+	log.Println("Service is stopped")
 	return nil
 }
 
@@ -103,17 +103,17 @@ func normalizeServiceStatus(status kservice.Status) string {
 func serviceStatusMessage(state string) string {
 	switch state {
 	case "running":
-		return i18n.DefaultText("服务状态：运行中")
+		return i18n.DefaultText("Service status: running")
 	case "stopped":
-		return i18n.DefaultText("服务状态：已停止")
+		return i18n.DefaultText("Service status: stopped")
 	default:
-		return i18n.DefaultText("服务状态：未知")
+		return i18n.DefaultText("Service status: unknown")
 	}
 }
 
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: i18n.DefaultText("安装 KokoroBox 服务"),
+	Short: i18n.DefaultText("Install KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -123,22 +123,22 @@ var serviceInstallCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, os.Args[0])
 		if err != nil {
-			return outputServiceCommandError("install", "创建服务失败", err)
+			return outputServiceCommandError("install", "Failed to create service", err)
 		}
 
 		if err := s.Install(); err != nil {
-			return outputServiceCommandError("install", "安装服务失败", err)
+			return outputServiceCommandError("install", "Failed to install service", err)
 		}
 		if err := s.Start(); err != nil {
-			return outputServiceCommandError("install", "启动服务失败", err)
+			return outputServiceCommandError("install", "Failed to start service", err)
 		}
-		return outputServiceCommandResult("服务安装成功", serviceCommandStatus{Action: "install", State: "running"})
+		return outputServiceCommandResult("Service installed successfully", serviceCommandStatus{Action: "install", State: "running"})
 	},
 }
 
 var serviceUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: i18n.DefaultText("卸载 KokoroBox 服务"),
+	Short: i18n.DefaultText("Uninstall KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -147,25 +147,25 @@ var serviceUninstallCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("uninstall", "创建服务失败", err)
+			return outputServiceCommandError("uninstall", "Failed to create service", err)
 		}
 
 		if err := s.Stop(); err != nil {
-			return outputServiceCommandError("uninstall", "停止服务失败", err)
+			return outputServiceCommandError("uninstall", "Failed to stop service", err)
 		}
 		if err := processrouter.RemoveFirewallRules(); err != nil {
-			return outputServiceCommandError("uninstall", "清理应用分流防火墙失败", err)
+			return outputServiceCommandError("uninstall", "Failed to remove application-routing firewall rules", err)
 		}
 		if err := s.Uninstall(); err != nil {
-			return outputServiceCommandError("uninstall", "卸载服务失败", err)
+			return outputServiceCommandError("uninstall", "Failed to uninstall service", err)
 		}
-		return outputServiceCommandResult("服务卸载成功", serviceCommandStatus{Action: "uninstall", State: "not-installed"})
+		return outputServiceCommandResult("Service uninstalled successfully", serviceCommandStatus{Action: "uninstall", State: "not-installed"})
 	},
 }
 
 var serviceStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: i18n.DefaultText("启动 KokoroBox 服务"),
+	Short: i18n.DefaultText("Start KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -174,19 +174,19 @@ var serviceStartCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("start", "创建服务失败", err)
+			return outputServiceCommandError("start", "Failed to create service", err)
 		}
 
 		if err := s.Start(); err != nil {
-			return outputServiceCommandError("start", "启动服务失败", err)
+			return outputServiceCommandError("start", "Failed to start service", err)
 		}
-		return outputServiceCommandResult("服务启动成功", serviceCommandStatus{Action: "start", State: "running"})
+		return outputServiceCommandResult("Service started successfully", serviceCommandStatus{Action: "start", State: "running"})
 	},
 }
 
 var serviceStopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: i18n.DefaultText("停止 KokoroBox 服务"),
+	Short: i18n.DefaultText("Stop KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -195,19 +195,19 @@ var serviceStopCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("stop", "创建服务失败", err)
+			return outputServiceCommandError("stop", "Failed to create service", err)
 		}
 
 		if err := s.Stop(); err != nil {
-			return outputServiceCommandError("stop", "停止服务失败", err)
+			return outputServiceCommandError("stop", "Failed to stop service", err)
 		}
-		return outputServiceCommandResult("服务停止成功", serviceCommandStatus{Action: "stop", State: "stopped"})
+		return outputServiceCommandResult("Service stopped successfully", serviceCommandStatus{Action: "stop", State: "stopped"})
 	},
 }
 
 var serviceRestartCmd = &cobra.Command{
 	Use:   "restart",
-	Short: i18n.DefaultText("重启 KokoroBox 服务"),
+	Short: i18n.DefaultText("Restart KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -216,19 +216,19 @@ var serviceRestartCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("restart", "创建服务失败", err)
+			return outputServiceCommandError("restart", "Failed to create service", err)
 		}
 
 		if err := s.Restart(); err != nil {
-			return outputServiceCommandError("restart", "重启服务失败", err)
+			return outputServiceCommandError("restart", "Failed to restart service", err)
 		}
-		return outputServiceCommandResult("服务重启成功", serviceCommandStatus{Action: "restart", State: "running"})
+		return outputServiceCommandResult("Service restarted successfully", serviceCommandStatus{Action: "restart", State: "running"})
 	},
 }
 
 var serviceStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: i18n.DefaultText("查看 KokoroBox 服务状态"),
+	Short: i18n.DefaultText("Show KokoroBox Service status"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		listenAddr := listen
 		if listenAddr == "" {
@@ -237,12 +237,12 @@ var serviceStatusCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("status", "创建服务失败", err)
+			return outputServiceCommandError("status", "Failed to create service", err)
 		}
 
 		status, err := s.Status()
 		if err != nil {
-			return outputServiceCommandError("status", "查询服务状态失败", err)
+			return outputServiceCommandError("status", "Failed to query service status", err)
 		}
 
 		state := normalizeServiceStatus(status)
@@ -252,7 +252,7 @@ var serviceStatusCmd = &cobra.Command{
 
 var serviceRunCmd = &cobra.Command{
 	Use:   "run",
-	Short: i18n.DefaultText("运行 KokoroBox 服务"),
+	Short: i18n.DefaultText("Run KokoroBox Service"),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ensureServiceRuntimeExecutable(); err != nil {
 			log.Fatal(err)
@@ -276,25 +276,25 @@ var serviceRunCmd = &cobra.Command{
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: i18n.DefaultText("管理 KokoroBox 服务"),
+	Short: i18n.DefaultText("Manage KokoroBox Service"),
 }
 
 var serviceInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: i18n.DefaultText("初始化服务（传入公钥）"),
+	Short: i18n.DefaultText("Initialize the service with a public key"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		publicKey := cmd.Flag("public-key").Value.String()
 		authorizedSID := cmd.Flag("authorized-sid").Value.String()
 		authorizedUID, _ := cmd.Flags().GetUint32("authorized-uid")
 		if publicKey == "" {
-			return outputServiceCommandError("init", "错误：必须通过 --public-key 参数提供公钥", errors.New("必须通过 --public-key 参数提供公钥"))
+			return outputServiceCommandError("init", "Error: a public key must be provided with --public-key", errors.New("A public key must be provided with --public-key"))
 		}
 		if authorizedSID == "" && !cmd.Flags().Changed("authorized-uid") {
-			return outputServiceCommandError("init", "错误：必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份", errors.New("必须通过 --authorized-sid 或 --authorized-uid 绑定允许访问服务的用户身份"))
+			return outputServiceCommandError("init", "Error: an authorized user identity must be bound with --authorized-sid or --authorized-uid", errors.New("An authorized user identity must be bound with --authorized-sid or --authorized-uid"))
 		}
 		dataDir, err := route.GetServiceDataDir()
 		if err != nil {
-			return outputServiceCommandError("init", "准备服务数据目录失败", err)
+			return outputServiceCommandError("init", "Failed to prepare service data directory", err)
 		}
 		keyDir := filepath.Join(dataDir, "keys")
 
@@ -303,7 +303,7 @@ var serviceInitCmd = &cobra.Command{
 		km := route.GetKeyManager()
 		keyChanged, err := km.SetPublicKey(publicKey)
 		if err != nil {
-			return outputServiceCommandError("init", "设置公钥失败", err)
+			return outputServiceCommandError("init", "Failed to set public key", err)
 		}
 
 		principalChanged := false
@@ -311,20 +311,20 @@ var serviceInitCmd = &cobra.Command{
 		case authorizedSID != "":
 			principalChanged, err = km.SetAuthorizedSID(authorizedSID)
 			if err != nil {
-				return outputServiceCommandError("init", "设置授权 SID 失败", err)
+				return outputServiceCommandError("init", "Failed to set authorized SID", err)
 			}
 		case cmd.Flags().Changed("authorized-uid"):
 			principalChanged, err = km.SetAuthorizedUID(authorizedUID)
 			if err != nil {
-				return outputServiceCommandError("init", "设置授权 UID 失败", err)
+				return outputServiceCommandError("init", "Failed to set authorized UID", err)
 			}
 		}
 
 		changed := keyChanged || principalChanged
 		if changed {
-			_ = outputServiceCommandResult("服务初始化成功，认证配置已更新", serviceCommandStatus{Action: "init", Changed: true})
+			_ = outputServiceCommandResult("Service initialized; authentication configuration updated", serviceCommandStatus{Action: "init", Changed: true})
 		} else {
-			_ = outputServiceCommandResult("服务初始化成功，认证配置未变化", serviceCommandStatus{Action: "init"})
+			_ = outputServiceCommandResult("Service initialized; authentication configuration unchanged", serviceCommandStatus{Action: "init"})
 		}
 
 		listenAddr := listen
@@ -334,27 +334,27 @@ var serviceInitCmd = &cobra.Command{
 		prg := &Program{listen: listenAddr}
 		s, err := appservice.New(prg, "")
 		if err != nil {
-			return outputServiceCommandError("init", "创建服务失败", err)
+			return outputServiceCommandError("init", "Failed to create service", err)
 		}
 
 		status, err := s.Status()
 		if err != nil {
-			return outputServiceCommandError("status", "查询服务状态失败；如果服务正在运行，请手动执行 'restart' 命令", err)
+			return outputServiceCommandError("status", "Failed to query service status; if the service is running, run 'restart' manually", err)
 		}
 
 		state := normalizeServiceStatus(status)
 		if status == kservice.StatusRunning {
 			if !changed {
-				return outputServiceCommandResult("服务已在运行，配置未变化，无需重启", serviceCommandStatus{Action: "init", State: state})
+				return outputServiceCommandResult("Service is already running; configuration is unchanged and no restart is needed", serviceCommandStatus{Action: "init", State: state})
 			}
-			log.S().Infow("正在重启服务...", "status", serviceCommandStatus{Action: "restart", State: state, Success: true})
+			log.S().Infow("Restarting service...", "status", serviceCommandStatus{Action: "restart", State: state, Success: true})
 			if err := s.Restart(); err != nil {
-				return outputServiceCommandError("restart", "重启服务失败；请手动执行 'kokorobox-service service restart' 命令", err)
+				return outputServiceCommandError("restart", "Failed to restart service; run 'kokorobox-service service restart' manually", err)
 			}
-			return outputServiceCommandResult("服务已成功重启", serviceCommandStatus{Action: "restart", State: "running"})
+			return outputServiceCommandResult("Service restarted successfully", serviceCommandStatus{Action: "restart", State: "running"})
 		}
 
-		return outputServiceCommandResult("服务未运行，配置将在下次启动时生效", serviceCommandStatus{Action: "init", State: state, Changed: changed})
+		return outputServiceCommandResult("Service is not running; configuration will apply on the next start", serviceCommandStatus{Action: "init", State: state, Changed: changed})
 	},
 }
 
@@ -368,7 +368,7 @@ func init() {
 	serviceCmd.AddCommand(serviceStatusCmd)
 	serviceCmd.AddCommand(serviceRunCmd)
 
-	serviceInitCmd.Flags().StringP("public-key", "k", "", i18n.DefaultText("客户端公钥"))
-	serviceInitCmd.Flags().String("authorized-sid", "", i18n.DefaultText("允许访问服务的 Windows SID"))
-	serviceInitCmd.Flags().Uint32("authorized-uid", 0, i18n.DefaultText("允许访问服务的 Unix UID"))
+	serviceInitCmd.Flags().StringP("public-key", "k", "", i18n.DefaultText("Client public key"))
+	serviceInitCmd.Flags().String("authorized-sid", "", i18n.DefaultText("Windows SID allowed to access the service"))
+	serviceInitCmd.Flags().Uint32("authorized-uid", 0, i18n.DefaultText("Unix UID allowed to access the service"))
 }

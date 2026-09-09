@@ -24,27 +24,27 @@ const (
 
 func AcceptWebSocket(w http.ResponseWriter, r *http.Request) (net.Conn, *bufio.ReadWriter, error) {
 	if r.Method != http.MethodGet {
-		return nil, nil, BadRequest("websocket 仅支持 GET")
+		return nil, nil, BadRequest("WebSocket only supports GET")
 	}
 	if !headerContainsToken(r.Header, "Connection", "upgrade") ||
 		!strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
-		return nil, nil, BadRequest("缺少 websocket upgrade 请求头")
+		return nil, nil, BadRequest("Missing WebSocket upgrade request header")
 	}
 	if r.Header.Get("Sec-WebSocket-Version") != "13" {
-		return nil, nil, BadRequest("不支持的 websocket 版本")
+		return nil, nil, BadRequest("Unsupported WebSocket version")
 	}
 
 	key := strings.TrimSpace(r.Header.Get("Sec-WebSocket-Key"))
 	if key == "" {
-		return nil, nil, BadRequest("缺少 Sec-WebSocket-Key")
+		return nil, nil, BadRequest("Missing Sec-WebSocket-Key")
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(key); err != nil || len(decoded) != 16 {
-		return nil, nil, BadRequest("无效的 Sec-WebSocket-Key")
+		return nil, nil, BadRequest("Invalid Sec-WebSocket-Key")
 	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		return nil, nil, fmt.Errorf("当前连接不支持 websocket")
+		return nil, nil, fmt.Errorf("Current connection does not support WebSocket")
 	}
 
 	conn, rw, err := hijacker.Hijack()
@@ -116,11 +116,11 @@ func ReadWebSocketFrame(r io.Reader) (byte, []byte, error) {
 
 	opcode := header[0] & 0x0f
 	if header[0]&0x80 == 0 {
-		return 0, nil, fmt.Errorf("websocket 不支持分片帧")
+		return 0, nil, fmt.Errorf("WebSocket does not support fragmented frames")
 	}
 	masked := header[1]&0x80 != 0
 	if !masked {
-		return 0, nil, fmt.Errorf("websocket 客户端帧必须 mask")
+		return 0, nil, fmt.Errorf("WebSocket client frames must be masked")
 	}
 	payloadLen := uint64(header[1] & 0x7f)
 
@@ -140,7 +140,7 @@ func ReadWebSocketFrame(r io.Reader) (byte, []byte, error) {
 	}
 
 	if payloadLen > webSocketMaxPayload {
-		return 0, nil, fmt.Errorf("websocket payload 过大")
+		return 0, nil, fmt.Errorf("WebSocket payload is too large")
 	}
 
 	var maskKey [4]byte

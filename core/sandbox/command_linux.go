@@ -39,7 +39,7 @@ type Command struct {
 
 func NewCommand(config Config) (*Command, error) {
 	if os.Geteuid() != 0 {
-		return nil, fmt.Errorf("核心沙盒需要 root 权限")
+		return nil, fmt.Errorf("Core sandbox requires root privileges")
 	}
 	if err := validateWritablePaths(config.WritablePaths); err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func NewCommand(config Config) (*Command, error) {
 		_ = configFile.Close()
 		_ = statusReader.Close()
 		_ = statusWriter.Close()
-		return fail(fmt.Errorf("读取 service 可执行文件路径失败：%w", err))
+		return fail(fmt.Errorf("Failed to read service executable path: %w", err))
 	}
 	cmd := exec.Command(serviceExecutable)
 	cmd.Env = reexecEnvironment()

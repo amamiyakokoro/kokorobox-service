@@ -331,9 +331,9 @@ func (cm *CoreManager) StartCoreWithProfile(profile *LaunchProfile, options ...L
 
 func (cm *CoreManager) startCoreLocked(profile *LaunchProfile, options launchOptions) error {
 	if !cm.isRunning.CompareAndSwap(false, true) {
-		return fmt.Errorf("核心进程已在运行中")
+		return fmt.Errorf("Core process is already running")
 	}
-	cm.emitCoreEvent(CoreEventStarting, "核心正在启动", nil)
+	cm.emitCoreEvent(CoreEventStarting, "Core is starting", nil)
 
 	cm.stopChan = make(chan struct{})
 
@@ -349,7 +349,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", err)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", err)
 		return err
 	}
 
@@ -372,7 +372,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", err)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", err)
 		return err
 	}
 	launch.addCleanup(command.cleanupNow)
@@ -395,7 +395,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
 		startErr := fmt.Errorf("启动核心进程失败：%w", err)
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", startErr)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", startErr)
 		return startErr
 	}
 
@@ -408,7 +408,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
 		attachErr := fmt.Errorf("附加核心进程控制失败：%w", err)
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", attachErr)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", attachErr)
 		return attachErr
 	}
 
@@ -432,7 +432,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.cleanupLocked()
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", err)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", err)
 		return err
 	}
 	if err := hardenLaunchControllerEndpoint(launch); err != nil {
@@ -440,7 +440,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.cleanupLocked()
-		cm.emitCoreEvent(CoreEventFailed, "核心启动失败", err)
+		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", err)
 		return err
 	}
 	if cleanup, err := startTrafficMonitorProxy(launch, cm.trafficMonitorPipeSDDL); err != nil {
@@ -453,7 +453,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	if launch.readyNotify != nil {
 		go cm.monitorStartupNotifications(launch, cm.stopChan)
 	}
-	cm.emitCoreEvent(CoreEventStarted, "核心已启动", nil)
+	cm.emitCoreEvent(CoreEventStarted, "Core started", nil)
 
 	return nil
 }
@@ -470,7 +470,7 @@ func (cm *CoreManager) stopCoreLocked() error {
 		return nil
 	}
 
-	cm.emitCoreEvent(CoreEventStopping, "核心正在停止", nil)
+	cm.emitCoreEvent(CoreEventStopping, "Core is stopping", nil)
 	cm.monitoring.Store(false)
 	cm.signalStopLocked()
 
@@ -479,7 +479,7 @@ func (cm *CoreManager) stopCoreLocked() error {
 	if stopErr != nil {
 		return stopErr
 	}
-	cm.emitCoreEvent(CoreEventStopped, "核心已停止", nil)
+	cm.emitCoreEvent(CoreEventStopped, "Core stopped", nil)
 	return nil
 }
 
@@ -491,7 +491,7 @@ func (cm *CoreManager) RestartCoreWithProfile(profile *LaunchProfile, options ..
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	cm.emitCoreEvent(CoreEventRestarting, "核心正在重启", nil)
+	cm.emitCoreEvent(CoreEventRestarting, "Core is restarting", nil)
 	if err := cm.stopCoreLocked(); err != nil {
 		log.Printf("停止进程时出错: %v", err)
 	}
@@ -532,7 +532,7 @@ func (cm *CoreManager) ControllerEndpoint() (string, string, error) {
 	defer cm.mutex.Unlock()
 
 	if cm.launch == nil || cm.launch.controllerNet == "" || cm.launch.controllerAddr == "" {
-		return "", "", fmt.Errorf("核心控制器未初始化")
+		return "", "", fmt.Errorf("Core controller is not initialized")
 	}
 
 	return cm.launch.controllerNet, cm.launch.controllerAddr, nil
@@ -592,11 +592,11 @@ func (cm *CoreManager) monitorProcess(cmd *exec.Cmd, errBuffer *boundedOutputBuf
 	cm.mutex.Unlock()
 
 	if err != nil {
-		log.Printf("核心进程异常退出: %v\n错误输出: %s", err, errBuffer.String())
+		log.Printf("Core process exited unexpectedly: %v\n错误输出: %s", err, errBuffer.String())
 	} else {
-		log.Printf("核心进程已退出 (PID: %d)", cmd.Process.Pid)
+		log.Printf("Core process exited (PID: %d)", cmd.Process.Pid)
 	}
-	cm.publishCoreEvent(cm.newCoreEvent(CoreEventExited, "核心进程已退出", err, int32(cmd.Process.Pid), 0))
+	cm.publishCoreEvent(cm.newCoreEvent(CoreEventExited, "Core process exited", err, int32(cmd.Process.Pid), 0))
 
 	cm.handleProcessExit()
 }
@@ -654,7 +654,7 @@ func (cm *CoreManager) handleStartupNotification(launch *launchSession) {
 
 	if newPID != oldPID {
 		log.Printf("核心进程已通过启动通知重新接管 (PID: %d -> %d)", oldPID, newPID)
-		cm.publishCoreEvent(cm.newCoreEvent(CoreEventTakeover, "核心进程已重新接管", nil, newPID, oldPID))
+		cm.publishCoreEvent(cm.newCoreEvent(CoreEventTakeover, "Core process taken over again", nil, newPID, oldPID))
 		return
 	}
 	cm.publishCoreEvent(cm.newCoreEvent(CoreEventReady, "核心已重新就绪", nil, newPID, 0))
@@ -695,7 +695,7 @@ func (cm *CoreManager) handleProcessExit() {
 			return
 		}
 		err := fmt.Errorf("达到最大重试次数，重启失败")
-		cm.emitCoreEvent(CoreEventRestartFailed, "核心重启失败", err)
+		cm.emitCoreEvent(CoreEventRestartFailed, "Failed to restart core", err)
 		log.Println(err)
 	}()
 }
@@ -735,8 +735,8 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 				cm.updateStartTimeFromPIDLocked(newPID)
 				cm.startPIDPollingLocked(cm.stopChan)
 				cm.mutex.Unlock()
-				log.Printf("核心进程已重新接管 (PID: %d -> %d)", oldPID, newPID)
-				cm.publishCoreEvent(cm.newCoreEvent(CoreEventTakeover, "核心进程已重新接管", nil, newPID, oldPID))
+				log.Printf("Core process taken over again (PID: %d -> %d)", oldPID, newPID)
+				cm.publishCoreEvent(cm.newCoreEvent(CoreEventTakeover, "Core process taken over again", nil, newPID, oldPID))
 				return true
 			}
 			cm.mutex.Unlock()
@@ -850,7 +850,7 @@ func (cm *CoreManager) monitorPID(stopChan <-chan struct{}) {
 				continue
 			}
 			if !exists && cm.isRunning.Load() {
-				log.Printf("核心进程已终止 (PID: %d)", pid)
+				log.Printf("Core process terminated (PID: %d)", pid)
 				cm.handleProcessExit()
 			}
 		case <-stopChan:
@@ -953,7 +953,7 @@ func (cm *CoreManager) GetProcessInfo() (*ProcessInfo, error) {
 	cm.mutex.Unlock()
 
 	if !cm.isRunning.Load() || pid <= 0 {
-		return nil, fmt.Errorf("进程未运行")
+		return nil, fmt.Errorf("Process is not running")
 	}
 
 	proc, err := process.NewProcess(pid)
