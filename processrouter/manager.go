@@ -60,9 +60,12 @@ func NewDefaultManager() *Manager {
 	binaryDir := filepath.Join(filepath.Dir(executable), "process-router")
 	configRoot := identity.ConfigDirectoryOverride()
 	if configRoot == "" {
-		if runtime.GOOS == "windows" {
+		switch runtime.GOOS {
+		case "windows":
 			configRoot = `C:\ProgramData`
-		} else {
+		case "linux":
+			configRoot = filepath.Join("/root", ".config")
+		default:
 			configRoot = os.TempDir()
 		}
 	}
