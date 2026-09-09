@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -40,6 +41,25 @@ func TestNormalizeRulesRequest(t *testing.T) {
 	}
 	if len(request.Rules) != 1 || request.Rules[0].ExecutableName != "Discord.exe" {
 		t.Fatalf("unexpected normalized request: %#v", request)
+	}
+}
+
+func TestNormalizeRulesRequestDefaultsPlatformToServer(t *testing.T) {
+	request := validRequest()
+	if runtime.GOOS == "linux" {
+		request = linuxRequest()
+	}
+	request.Platform = ""
+	normalized, err := normalizeRulesRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := runtime.GOOS
+	if expected != "windows" && expected != "linux" {
+		expected = "windows"
+	}
+	if normalized.Platform != expected {
+		t.Fatalf("unexpected default platform: got %s, want %s", normalized.Platform, expected)
 	}
 }
 

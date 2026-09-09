@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -125,7 +126,10 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 	}
 	if request.Platform == "" {
 		// Protocol v1 Windows clients did not send a platform field.
-		request.Platform = "windows"
+		request.Platform = runtime.GOOS
+		if request.Platform != "windows" && request.Platform != "linux" {
+			request.Platform = "windows"
+		}
 	}
 	if request.Platform != "windows" && request.Platform != "linux" {
 		return RulesRequest{}, fmt.Errorf("unsupported process router platform: %s", request.Platform)
