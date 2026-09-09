@@ -49,6 +49,11 @@ type linuxNativeProcess struct {
 	originalCgroups map[int]string
 }
 
+type linuxProcessSnapshot struct {
+	pid            int
+	executablePath string
+}
+
 func hardenProcessRouterPaths(_ string, configDir string) error {
 	info, err := os.Lstat(configDir)
 	if err != nil {
@@ -221,9 +226,14 @@ func (p *linuxNativeProcess) monitorProcesses(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			snapshot, err := snapshotLinuxProcesses()
+			if err != nil {
+				log.Printf("Linux 应用分流进程扫描失败: %v", err)
+				continue
+			}
 			p.mu.Lock()
 			if p.alive {
-				if err := p.scanProcessesLocked(); err != nil {
+				if err := p.applyProcessSnapshotLocked(snapshot); err != nil {
 					log.Printf("Linux 应用分流进程扫描失败: %v", err)
 				}
 			}
@@ -233,25 +243,19 @@ func (p *linuxNativeProcess) monitorProcesses(ctx context.Context) {
 }
 
 func (p *linuxNativeProcess) scanProcessesLocked() error {
-	entries, err := os.ReadDir("/proc")
+	snapshot, err := snapshotLinuxProcesses()
 	if err != nil {
 		return err
 	}
+	return p.applyProcessSnapshotLocked(snapshot)
+}
+
+func (p *linuxNativeProcess) applyProcessSnapshotLocked(snapshot []linuxProcessSnapshot) error {
 	seen := make(map[int]bool)
 	var scanErr error
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		pid, err := strconv.Atoi(entry.Name())
-		if err != nil || pid <= 1 || pid == os.Getpid() {
-			continue
-		}
-		executablePath, err := os.Readlink(filepath.Join("/proc", entry.Name(), "exe"))
-		if err != nil || strings.HasSuffix(executablePath, " (deleted)") {
-			continue
-		}
-		group, matches := p.targets[executablePath]
+	for _, process := range snapshot {
+		pid := process.pid
+		group, matches := p.targets[process.executablePath]
 		if !matches {
 			if _, assigned := p.assigned[pid]; assigned {
 				scanErr = errors.Join(scanErr, p.restoreProcessLocked(pid))
@@ -286,6 +290,32 @@ func (p *linuxNativeProcess) scanProcessesLocked() error {
 		}
 	}
 	return scanErr
+}
+
+func snapshotLinuxProcesses() ([]linuxProcessSnapshot, error) {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return nil, err
+	}
+	snapshot := make([]linuxProcessSnapshot, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil || pid <= 1 || pid == os.Getpid() {
+			continue
+		}
+		executablePath, err := os.Readlink(filepath.Join("/proc", entry.Name(), "exe"))
+		if err != nil || strings.HasSuffix(executablePath, " (deleted)") {
+			continue
+		}
+		snapshot = append(snapshot, linuxProcessSnapshot{
+			pid:            pid,
+			executablePath: executablePath,
+		})
+	}
+	return snapshot, nil
 }
 
 func (p *linuxNativeProcess) inheritedOriginalCgroup(pid int) string {
