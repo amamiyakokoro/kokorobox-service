@@ -1,10 +1,11 @@
 # kokorobox-service
 
-This is a fork of [xishang0128/sparkle-service](https://github.com/xishang0128/sparkle-service) maintained for KokoroBox.
+KokoroBox Service is the system service for KokoroBox. It is independently maintained and was
+originally based on [xishang0128/sparkle-service](https://github.com/xishang0128/sparkle-service).
 
 Written in Go, this system service manages the proxy core process, system proxy settings, and DNS configuration. It exposes a local HTTP API over a Unix socket on Linux and macOS or a named pipe on Windows.
 
-## Fork-specific features
+## KokoroBox features
 
 - Starts and supervises the KokoroBox Process Router on Windows x64.
 - Changes enabled Proxy rules to Block when Mihomo is unavailable, preventing unintended direct connections.
@@ -41,8 +42,8 @@ kokorobox-service process-router firewall remove
 
 ## Documentation
 
-- [Upstream project](https://github.com/xishang0128/sparkle-service)
-- [Archived full README](README.original.md)
+- [Original project](https://github.com/xishang0128/sparkle-service)
+- [Original README](README.original.md)
 
 ## License
 
