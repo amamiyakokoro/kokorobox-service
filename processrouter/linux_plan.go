@@ -18,6 +18,7 @@ const (
 	linuxInputChain   = "KOKOROBOX_PRE"
 	linuxDNSChain     = "KOKOROBOX_DNS"
 	linuxBlockChain   = "KOKOROBOX_BLOCK"
+	linuxGuardChain   = "KOKOROBOX_GUARD"
 )
 
 var linuxRoutingGroups = []string{
@@ -74,9 +75,22 @@ func buildLinuxFirewallSetup(mode linuxCgroupMode, proxyPort int, proxyUDPDNS bo
 		plan = appendLinuxCommand(plan, binary, "-t", "mangle", "-N", linuxOutputChain)
 		plan = appendLinuxCommand(plan, binary, "-t", "mangle", "-N", linuxInputChain)
 		plan = appendLinuxCommand(plan, binary, "-t", "filter", "-N", linuxBlockChain)
+		plan = appendLinuxCommand(plan, binary, "-t", "filter", "-N", linuxGuardChain)
 		plan = appendLinuxCommand(plan, binary, "-t", "mangle", "-A", "OUTPUT", "-j", linuxOutputChain)
 		plan = appendLinuxCommand(plan, binary, "-t", "mangle", "-A", "PREROUTING", "-j", linuxInputChain)
 		plan = appendLinuxCommand(plan, binary, "-t", "filter", "-A", "OUTPUT", "-j", linuxBlockChain)
+		plan = appendLinuxCommand(plan, binary, "-t", "filter", "-A", "INPUT", "-j", linuxGuardChain)
+		for _, protocol := range []string{"tcp", "udp"} {
+			plan = appendLinuxCommand(
+				plan,
+				binary,
+				"-t", "filter", "-A", linuxGuardChain,
+				"!", "-i", "lo",
+				"-p", protocol,
+				"--dport", strconv.Itoa(proxyPort),
+				"-j", "DROP",
+			)
+		}
 		if proxyUDPDNS {
 			plan = appendLinuxCommand(plan, binary, "-t", "nat", "-N", linuxDNSChain)
 			plan = appendLinuxCommand(plan, binary, "-t", "nat", "-A", "OUTPUT", "-j", linuxDNSChain)
@@ -143,6 +157,7 @@ func buildLinuxFirewallCleanup() []linuxCommand {
 			{"mangle", "PREROUTING", linuxInputChain},
 			{"nat", "OUTPUT", linuxDNSChain},
 			{"filter", "OUTPUT", linuxBlockChain},
+			{"filter", "INPUT", linuxGuardChain},
 		} {
 			plan = appendLinuxCommand(plan, binary, "-t", item.table, "-D", item.parent, "-j", item.chain)
 			plan = appendLinuxCommand(plan, binary, "-t", item.table, "-F", item.chain)

@@ -14,6 +14,7 @@ func TestLinuxCgroupV2FirewallPlanUsesPathMatchingAndTPROXY(t *testing.T) {
 		"ip6tables -t mangle -A KOKOROBOX_PRE",
 		"--on-port 7894",
 		"--to-ports 7892",
+		"iptables -t filter -A KOKOROBOX_GUARD ! -i lo -p tcp --dport 7894 -j DROP",
 		"ip -4 rule add priority 10900 fwmark 0x4b42/0xffffffff lookup 20269",
 		"ip -4 rule del priority 10900 fwmark 0x4b42/0xffffffff lookup 20269",
 	} {
