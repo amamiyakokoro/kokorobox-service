@@ -10,6 +10,8 @@ Written in Go, this system service manages the proxy core process, system proxy 
 - Changes enabled Proxy rules to Block when Mihomo is unavailable, preventing unintended direct connections.
 - Validates and persists Process Router rules, with APIs for status, shutdown, and cleanup.
 - Uses a client lease to release Router and WinDivert resources after an abnormal client exit.
+- Creates, verifies, repairs, and removes the narrowly scoped Windows Firewall rules required by
+  the Process Router TCP and UDP relays.
 
 The native Process Router components must be placed in the `process-router` directory next to `kokorobox-service.exe`. This integration currently supports Windows 10/11 x64 only.
 
@@ -26,6 +28,15 @@ Install the system service with administrator privileges on Windows or root priv
 
 ```bash
 kokorobox-service service install
+```
+
+The same privileged helper used by portable KokoroBox builds can manage the application-routing
+firewall rule group explicitly:
+
+```bash
+kokorobox-service process-router firewall ensure
+kokorobox-service process-router firewall check
+kokorobox-service process-router firewall remove
 ```
 
 ## Documentation
