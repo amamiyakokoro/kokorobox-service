@@ -108,6 +108,9 @@ func (p *windowsNativeProcess) Alive() bool {
 	}
 }
 
+func (p *windowsNativeProcess) FirewallReady() bool { return p.Alive() }
+func (p *windowsNativeProcess) Backend() string     { return "windows-proxybridge" }
+
 func (p *windowsNativeProcess) Send(payload []byte) error {
 	if !p.Alive() {
 		return errors.New("native process router is not running")

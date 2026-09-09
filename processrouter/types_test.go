@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -11,10 +12,22 @@ import (
 
 func validRequest() RulesRequest {
 	return RulesRequest{
-		Version: ProtocolVersion, ProxyPort: ProxyPort, FailClosed: true,
+		Version: ProtocolVersion, Platform: "windows", ProxyPort: WindowsProxyPort, FailClosed: true,
 		Rules: []Rule{{
 			ID: "discord", ExecutablePath: `C:\Program Files\Discord\Discord.exe`,
 			ExecutableName: "Discord.exe", Protocol: "both", Action: "proxy",
+			Enabled: true, Priority: 1,
+		}},
+	}
+}
+
+func linuxRequest() RulesRequest {
+	return RulesRequest{
+		Version: ProtocolVersion, Platform: "linux", ProxyPort: LinuxProxyPort, FailClosed: true,
+		ProxyUDPDNS: true, DiagnosticLogging: true,
+		Rules: []Rule{{
+			ID: "firefox", ExecutablePath: "/usr/lib/firefox/firefox",
+			ExecutableName: "firefox", Protocol: "both", Action: "proxy",
 			Enabled: true, Priority: 1,
 		}},
 	}
@@ -27,6 +40,29 @@ func TestNormalizeRulesRequest(t *testing.T) {
 	}
 	if len(request.Rules) != 1 || request.Rules[0].ExecutableName != "Discord.exe" {
 		t.Fatalf("unexpected normalized request: %#v", request)
+	}
+}
+
+func TestNormalizeLinuxRulesRequest(t *testing.T) {
+	request, err := normalizeRulesRequest(linuxRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.ProxyPort != LinuxProxyPort || !request.ProxyUDPDNS || !request.DiagnosticLogging {
+		t.Fatalf("unexpected normalized Linux request: %#v", request)
+	}
+	for _, executablePath := range []string{
+		"usr/bin/firefox",
+		"/usr/../bin/firefox",
+		"/usr/bin/fire*",
+		"/opt/kokorobox/kokorobox",
+	} {
+		invalid := linuxRequest()
+		invalid.Rules[0].ExecutablePath = executablePath
+		invalid.Rules[0].ExecutableName = path.Base(executablePath)
+		if _, err := normalizeRulesRequest(invalid); err == nil {
+			t.Fatalf("expected Linux path to be rejected: %s", executablePath)
+		}
 	}
 }
 
@@ -95,7 +131,7 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	port := listener.Addr().(*net.TCPAddr).Port
-	if !probeMihomo(port) {
+	if !probeMihomo(port, true) {
 		t.Fatal("expected a valid SOCKS5 greeting")
 	}
 
@@ -116,7 +152,7 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	invalidPort := invalidListener.Addr().(*net.TCPAddr).Port
-	if probeMihomo(invalidPort) {
+	if probeMihomo(invalidPort, true) {
 		t.Fatal("accepted an invalid SOCKS5 greeting")
 	}
 }

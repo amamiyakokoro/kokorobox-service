@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 var processRouterFiles = []string{
@@ -23,6 +24,9 @@ type integrityManifest struct {
 }
 
 func verifyProcessRouterIntegrity(binaryDir string) error {
+	if runtime.GOOS != "windows" {
+		return nil
+	}
 	manifestBytes, err := os.ReadFile(filepath.Join(binaryDir, "manifest.json"))
 	if err != nil {
 		return fmt.Errorf("read process router manifest: %w", err)
