@@ -32,6 +32,10 @@ content-addressed directory below `%ProgramFiles%\KokoroBox Service` before regi
 Service Control Manager. This keeps the privileged runtime outside user-writable Desktop
 installations and permits safe replacement without overwriting a running executable.
 
+When the Windows service launches a bundled Mihomo core from a current-user Desktop installation,
+it likewise copies the verified executable into `%ProgramData%\KokoroBox\core-runtime` and applies
+the privileged ACL there. It does not make the user's application directory read-only.
+
 ## Localization
 
 Supports `en` (default), `zh-CN`, and `zh-TW`. Set `KOKOROBOX_LOCALE` or use `--locale`; HTTP

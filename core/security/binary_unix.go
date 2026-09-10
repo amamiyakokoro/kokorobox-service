@@ -25,6 +25,16 @@ func SecureBinary(corePath string) error {
 	return nil
 }
 
+// PrepareBinary hardens an executable in place on Unix installations, where
+// packaged application directories are already outside an ordinary user's
+// writable application-data directory.
+func PrepareBinary(corePath string) (string, error) {
+	if err := SecureBinary(corePath); err != nil {
+		return "", err
+	}
+	return corePath, nil
+}
+
 func removeGroupAndOtherWrite(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {

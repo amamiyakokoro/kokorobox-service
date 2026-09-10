@@ -162,7 +162,8 @@ func (cm *CoreManager) prepareLaunchSession(profileOverride *LaunchProfile, opti
 		saveLogs = *profile.SaveLogs
 	}
 
-	if err := security.SecureBinary(corePath); err != nil {
+	executablePath, err := security.PrepareBinary(corePath)
+	if err != nil {
 		return nil, err
 	}
 
@@ -189,7 +190,7 @@ func (cm *CoreManager) prepareLaunchSession(profileOverride *LaunchProfile, opti
 
 	return &launchSession{
 		sourcePath:     corePath,
-		executablePath: corePath,
+		executablePath: executablePath,
 		workingDir:     workingDir,
 		args:           args,
 		env:            buildLaunchEnv(profile, hook.env),

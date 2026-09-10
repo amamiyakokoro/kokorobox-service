@@ -625,7 +625,7 @@ func (cm *CoreManager) handleStartupNotification(launch *launchSession) {
 	controller := cm.controller
 	cm.mutex.Unlock()
 
-	if err := security.SecureBinary(launch.sourcePath); err != nil {
+	if err := security.SecureBinary(launch.executablePath); err != nil {
 		log.Printf("核心启动通知后加固核心文件失败: %v", err)
 	}
 	if err := hardenLaunchControllerEndpoint(launch); err != nil {
@@ -717,7 +717,7 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 
 		newPID, ok := findManagedCorePID(controller, oldPID, launch)
 		if ok {
-			if err := security.SecureBinary(launch.sourcePath); err != nil {
+			if err := security.SecureBinary(launch.executablePath); err != nil {
 				log.Printf("重新接管前加固核心文件失败: %v", err)
 				_ = controller.Stop(newPID)
 				return false
