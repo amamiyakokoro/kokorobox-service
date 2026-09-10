@@ -72,6 +72,22 @@ func TestNormalizeRulesRequest(t *testing.T) {
 	}
 }
 
+func TestNormalizeWindowsFilenameAndWildcardRules(t *testing.T) {
+	for _, pattern := range []string{
+		"Discord.exe",
+		"Discord*.exe",
+		`C:\Program Files\Discord*\Discord.exe`,
+		`\\server\applications\Discord*\Discord.exe`,
+	} {
+		request := validRequest()
+		request.Rules[0].ExecutablePath = pattern
+		request.Rules[0].ExecutableName = windowsBaseName(pattern)
+		if _, err := normalizeRulesRequest(request); err != nil {
+			t.Fatalf("expected Windows pattern to be accepted (%s): %v", pattern, err)
+		}
+	}
+}
+
 func TestNormalizeRulesRequestDefaultsPlatformToServer(t *testing.T) {
 	request := validRequest()
 	if runtime.GOOS == "linux" {
@@ -121,14 +137,20 @@ func TestRejectsUnsafeRules(t *testing.T) {
 	}{
 		{"fail open", func(r *RulesRequest) { r.FailClosed = false }},
 		{"wrong port", func(r *RulesRequest) { r.ProxyPort = 1080 }},
-		{"wildcard", func(r *RulesRequest) {
-			r.Rules[0].ExecutablePath = `C:\Apps\*.exe`
-			r.Rules[0].ExecutableName = "*.exe"
+		{"relative path with directory", func(r *RulesRequest) {
+			r.Rules[0].ExecutablePath = `Apps\Discord.exe`
 		}},
-		{"relative path", func(r *RulesRequest) { r.Rules[0].ExecutablePath = `Discord.exe` }},
+		{"question-mark wildcard", func(r *RulesRequest) {
+			r.Rules[0].ExecutablePath = `Discord?.exe`
+			r.Rules[0].ExecutableName = "Discord?.exe"
+		}},
 		{"protected process", func(r *RulesRequest) {
 			r.Rules[0].ExecutablePath = `C:\Apps\KokoroBox.exe`
 			r.Rules[0].ExecutableName = "KokoroBox.exe"
+		}},
+		{"protected wildcard", func(r *RulesRequest) {
+			r.Rules[0].ExecutablePath = `kokoro*.exe`
+			r.Rules[0].ExecutableName = "kokoro*.exe"
 		}},
 		{"name mismatch", func(r *RulesRequest) { r.Rules[0].ExecutableName = "Other.exe" }},
 	}

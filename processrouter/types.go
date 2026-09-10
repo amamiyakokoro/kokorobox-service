@@ -197,15 +197,15 @@ func validateRule(rule Rule, platform string) error {
 		}
 		name = path.Base(rule.ExecutablePath)
 	} else {
-		if !validWindowsExecutablePath(rule.ExecutablePath) {
-			return errors.New("executable_path must be an absolute canonical Windows .exe path")
+		if !validWindowsExecutablePattern(rule.ExecutablePath) {
+			return errors.New("executable_path must be a Windows .exe filename or absolute path pattern")
 		}
 		name = windowsBaseName(rule.ExecutablePath)
 	}
 	if name == "" || !strings.EqualFold(name, rule.ExecutableName) {
 		return errors.New("executable_name does not match executable_path")
 	}
-	if isProtectedProcess(name) {
+	if isProtectedProcessPattern(name) {
 		return fmt.Errorf("%s cannot be intercepted", name)
 	}
 	if !validProtocols[rule.Protocol] {
@@ -230,22 +230,30 @@ func validLinuxExecutablePath(value string) bool {
 	return !strings.ContainsAny(value, "*?;,\r\n")
 }
 
-func validWindowsExecutablePath(value string) bool {
+func validWindowsExecutablePattern(value string) bool {
 	if value == "" || len([]byte(value)) > maxPathBytes || strings.ContainsRune(value, '\x00') {
 		return false
 	}
-	if strings.ContainsAny(value, "*?;,") || strings.Contains(value, "/") {
+	if strings.ContainsAny(value, "?;,\"") || strings.Contains(value, "/") {
 		return false
 	}
 	if strings.HasPrefix(value, `\\?\`) || strings.HasPrefix(value, `\\.\`) {
 		return false
 	}
+	for _, character := range value {
+		if character < 32 {
+			return false
+		}
+	}
+	if !strings.HasSuffix(strings.ToLower(value), ".exe") {
+		return false
+	}
+	if !strings.Contains(value, `\`) {
+		return !strings.ContainsAny(value, `<>:|`) && value != ".exe"
+	}
 	drivePath := len(value) > 3 && isASCIIAlpha(value[0]) && value[1] == ':' && value[2] == '\\'
 	uncPath := len(value) > 4 && strings.HasPrefix(value, `\\`)
 	if !drivePath && !uncPath {
-		return false
-	}
-	if !strings.HasSuffix(strings.ToLower(value), ".exe") {
 		return false
 	}
 	pathBody := value[3:]
@@ -261,11 +269,6 @@ func validWindowsExecutablePath(value string) bool {
 	for _, segment := range segments {
 		if segment == "" || segment == "." || segment == ".." || strings.HasSuffix(segment, ".") || strings.HasSuffix(segment, " ") || strings.ContainsAny(segment, `<>:"|`) {
 			return false
-		}
-		for _, character := range segment {
-			if character < 32 {
-				return false
-			}
 		}
 	}
 	return true
@@ -288,6 +291,45 @@ func isProtectedProcess(name string) bool {
 		return true
 	}
 	return strings.HasPrefix(normalized, "kokorobox-desktop-windows-") && strings.HasSuffix(normalized, "-setup.exe")
+}
+
+func wildcardMatches(pattern string, value string) bool {
+	pattern = strings.ToLower(pattern)
+	value = strings.ToLower(value)
+	patternIndex, valueIndex := 0, 0
+	starIndex, starValueIndex := -1, 0
+	for valueIndex < len(value) {
+		if patternIndex < len(pattern) && pattern[patternIndex] == value[valueIndex] {
+			patternIndex++
+			valueIndex++
+			continue
+		}
+		if patternIndex < len(pattern) && pattern[patternIndex] == '*' {
+			starIndex = patternIndex
+			patternIndex++
+			starValueIndex = valueIndex
+			continue
+		}
+		if starIndex < 0 {
+			return false
+		}
+		patternIndex = starIndex + 1
+		starValueIndex++
+		valueIndex = starValueIndex
+	}
+	for patternIndex < len(pattern) && pattern[patternIndex] == '*' {
+		patternIndex++
+	}
+	return patternIndex == len(pattern)
+}
+
+func isProtectedProcessPattern(pattern string) bool {
+	for name := range protectedNames {
+		if wildcardMatches(pattern, name) {
+			return true
+		}
+	}
+	return wildcardMatches(pattern, "kokorobox-desktop-windows-2.0.0-x64-setup.exe")
 }
 
 func buildRouterCommand(request RulesRequest, proxyAvailable bool) routerCommand {
