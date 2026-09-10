@@ -119,14 +119,22 @@ var serviceInstallCmd = &cobra.Command{
 		if listenAddr == "" {
 			listenAddr = defaultAddr
 		}
+		executable, err := os.Executable()
+		if err != nil {
+			return outputServiceCommandError("install", "Failed to resolve service executable", err)
+		}
+		executable, err = prepareServiceInstallExecutable(executable)
+		if err != nil {
+			return outputServiceCommandError("install", "Failed to prepare service executable", err)
+		}
 
 		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, os.Args[0])
+		s, err := appservice.New(prg, executable)
 		if err != nil {
 			return outputServiceCommandError("install", "Failed to create service", err)
 		}
 
-		if err := s.Install(); err != nil {
+		if err := installServiceRegistration(s); err != nil {
 			return outputServiceCommandError("install", "Failed to install service", err)
 		}
 		if err := s.Start(); err != nil {
