@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/amamiyakokoro/kokorobox-service/identity"
+	"github.com/amamiyakokoro/kokorobox-service/processrouter"
 	kservice "github.com/kardianos/service"
 	"golang.org/x/sys/windows"
 )
@@ -33,53 +34,118 @@ func prepareServiceInstallExecutable(source string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("hash service executable: %w", err)
 	}
-	directory := filepath.Join(programFiles, serviceInstallDirectoryName, sourceHash[:16])
-	if err := os.MkdirAll(directory, 0o755); err != nil {
-		return "", fmt.Errorf("create protected service directory: %w", err)
-	}
-	target := filepath.Join(directory, identity.ServiceExecutable+".exe")
 
-	if targetHash, err := executableSHA256(target); err == nil {
-		if targetHash != sourceHash {
-			return "", errors.New("existing protected service executable has an unexpected digest")
+	sourceRouterDirectory := filepath.Join(filepath.Dir(source), "process-router")
+	routerManifestHash := ""
+	if _, err := os.Stat(sourceRouterDirectory); err == nil {
+		if err := processrouter.VerifyIntegrity(sourceRouterDirectory); err != nil {
+			return "", fmt.Errorf("verify source process-router bundle: %w", err)
+		}
+		routerManifestHash, err = executableSHA256(filepath.Join(sourceRouterDirectory, "manifest.json"))
+		if err != nil {
+			return "", fmt.Errorf("hash process-router manifest: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("inspect source process-router bundle: %w", err)
+	}
+
+	bundleHash := sha256.Sum256([]byte(sourceHash + "\n" + routerManifestHash))
+	bundleID := hex.EncodeToString(bundleHash[:])[:16]
+	runtimeRoot := filepath.Join(programFiles, serviceInstallDirectoryName, "runtime")
+	targetDirectory := filepath.Join(runtimeRoot, bundleID)
+	target := filepath.Join(targetDirectory, identity.ServiceExecutable+".exe")
+	withRouter := routerManifestHash != ""
+
+	if _, err := os.Stat(targetDirectory); err == nil {
+		if err := validateStagedService(targetDirectory, sourceHash, withRouter); err != nil {
+			return "", err
 		}
 		return target, nil
 	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("inspect protected service executable: %w", err)
+		return "", fmt.Errorf("inspect protected service runtime: %w", err)
 	}
 
-	temporary, err := os.CreateTemp(directory, ".kokorobox-service-*.exe")
+	if err := os.MkdirAll(runtimeRoot, 0o755); err != nil {
+		return "", fmt.Errorf("create protected service runtime root: %w", err)
+	}
+	temporaryDirectory, err := os.MkdirTemp(runtimeRoot, ".kokorobox-service-*")
 	if err != nil {
-		return "", fmt.Errorf("create temporary service executable: %w", err)
+		return "", fmt.Errorf("create temporary service runtime: %w", err)
 	}
-	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
+	defer os.RemoveAll(temporaryDirectory)
 
-	input, err := os.Open(source)
-	if err != nil {
-		_ = temporary.Close()
-		return "", fmt.Errorf("open service executable: %w", err)
+	if err := copyRuntimeFile(source, filepath.Join(temporaryDirectory, identity.ServiceExecutable+".exe")); err != nil {
+		return "", fmt.Errorf("stage service executable: %w", err)
 	}
-	_, copyErr := io.Copy(temporary, input)
-	closeInputErr := input.Close()
-	syncErr := temporary.Sync()
-	closeTemporaryErr := temporary.Close()
-
-	switch {
-	case copyErr != nil:
-		return "", fmt.Errorf("copy service executable: %w", copyErr)
-	case closeInputErr != nil:
-		return "", fmt.Errorf("close source service executable: %w", closeInputErr)
-	case syncErr != nil:
-		return "", fmt.Errorf("flush protected service executable: %w", syncErr)
-	case closeTemporaryErr != nil:
-		return "", fmt.Errorf("close protected service executable: %w", closeTemporaryErr)
+	if withRouter {
+		temporaryRouterDirectory := filepath.Join(temporaryDirectory, "process-router")
+		if err := os.Mkdir(temporaryRouterDirectory, 0o755); err != nil {
+			return "", fmt.Errorf("create staged process-router directory: %w", err)
+		}
+		for _, name := range processrouter.RuntimeBundleFiles() {
+			if err := copyRuntimeFile(
+				filepath.Join(sourceRouterDirectory, name),
+				filepath.Join(temporaryRouterDirectory, name),
+			); err != nil {
+				return "", fmt.Errorf("stage process-router component %s: %w", name, err)
+			}
+		}
 	}
-
-	if err := os.Rename(temporaryPath, target); err != nil {
-		return "", fmt.Errorf("publish protected service executable: %w", err)
+	if err := validateStagedService(temporaryDirectory, sourceHash, withRouter); err != nil {
+		return "", err
+	}
+	if err := os.Rename(temporaryDirectory, targetDirectory); err != nil {
+		if _, statErr := os.Stat(targetDirectory); statErr != nil {
+			return "", fmt.Errorf("publish protected service runtime: %w", err)
+		}
+		if validateErr := validateStagedService(targetDirectory, sourceHash, withRouter); validateErr != nil {
+			return "", validateErr
+		}
 	}
 	return target, nil
+}
+
+func validateStagedService(directory, expectedServiceHash string, withRouter bool) error {
+	servicePath := filepath.Join(directory, identity.ServiceExecutable+".exe")
+	serviceHash, err := executableSHA256(servicePath)
+	if err != nil {
+		return fmt.Errorf("hash staged service executable: %w", err)
+	}
+	if serviceHash != expectedServiceHash {
+		return errors.New("staged service executable has an unexpected digest")
+	}
+	if withRouter {
+		if err := processrouter.VerifyIntegrity(filepath.Join(directory, "process-router")); err != nil {
+			return fmt.Errorf("verify staged process-router bundle: %w", err)
+		}
+	}
+	return nil
+}
+
+func copyRuntimeFile(source, target string) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	output, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o755)
+	if err != nil {
+		_ = input.Close()
+		return err
+	}
+	_, copyErr := io.Copy(output, input)
+	closeInputErr := input.Close()
+	syncErr := output.Sync()
+	closeOutputErr := output.Close()
+	switch {
+	case copyErr != nil:
+		return copyErr
+	case closeInputErr != nil:
+		return closeInputErr
+	case syncErr != nil:
+		return syncErr
+	default:
+		return closeOutputErr
+	}
 }
 
 func executableSHA256(path string) (string, error) {

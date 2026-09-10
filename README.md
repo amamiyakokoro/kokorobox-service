@@ -27,10 +27,10 @@ Install with administrator privileges on Windows or root privileges on Linux and
 kokorobox-service service install
 ```
 
-On Windows, `service install` copies the executable into a content-addressed directory below
-`%ProgramFiles%\KokoroBox Service` before registering it with the Service Control Manager. This
-keeps the privileged service binary outside user-writable Desktop installations and permits safe
-replacement without overwriting a running executable.
+On Windows, `service install` copies the executable and its verified Process Router bundle into a
+content-addressed directory below `%ProgramFiles%\KokoroBox Service` before registering it with the
+Service Control Manager. This keeps the privileged runtime outside user-writable Desktop
+installations and permits safe replacement without overwriting a running executable.
 
 ## Localization
 

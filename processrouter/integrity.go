@@ -18,6 +18,17 @@ var processRouterFiles = []string{
 	"WinDivert64.sys",
 }
 
+// RuntimeBundleFiles returns the files that must stay next to the privileged
+// service runtime for Windows application routing.
+func RuntimeBundleFiles() []string {
+	return append([]string{"manifest.json"}, processRouterFiles...)
+}
+
+// VerifyIntegrity validates a staged Windows process-router bundle.
+func VerifyIntegrity(binaryDir string) error {
+	return verifyProcessRouterIntegrity(binaryDir)
+}
+
 type integrityManifest struct {
 	Version int               `json:"version"`
 	SHA256  map[string]string `json:"sha256"`
