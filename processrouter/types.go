@@ -98,7 +98,7 @@ type persistedConfig struct {
 }
 
 type routerRule struct {
-	ExecutablePath string `json:"executablePath"`
+	ProcessPattern string `json:"processPattern"`
 	Protocol       string `json:"protocol"`
 	Action         string `json:"action"`
 	Enabled        bool   `json:"enabled"`
@@ -340,7 +340,7 @@ func buildRouterCommand(request RulesRequest, proxyAvailable bool) routerCommand
 			action = "BLOCK"
 		}
 		rules = append(rules, routerRule{
-			ExecutablePath: rule.ExecutablePath,
+			ProcessPattern: rule.ExecutablePath,
 			Protocol:       strings.ToUpper(rule.Protocol),
 			Action:         action,
 			Enabled:        rule.Enabled,

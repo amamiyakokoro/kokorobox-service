@@ -156,7 +156,7 @@ func (p *linuxNativeProcess) Send(payload []byte) error {
 		if err := validateLinuxRoutingGroup(group); err != nil {
 			return err
 		}
-		targets[rule.ExecutablePath] = group
+		targets[rule.ProcessPattern] = group
 	}
 	p.targets = targets
 	if err := p.scanProcessesLocked(); err != nil {
