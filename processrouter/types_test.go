@@ -165,7 +165,7 @@ func TestRejectsUnsafeRules(t *testing.T) {
 	}
 }
 
-func TestProxyRulesBecomeBlockWhenMihomoIsUnavailable(t *testing.T) {
+func TestProxyRulesBecomeBlockWhenMihomoIsUnavailableAndKeepFalseFlags(t *testing.T) {
 	request, err := normalizeRulesRequest(validRequest())
 	if err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestProxyRulesBecomeBlockWhenMihomoIsUnavailable(t *testing.T) {
 	if len(payload) == 0 {
 		t.Fatal("expected native router command")
 	}
-	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7891},"failClosed":true,"rules":[{"executablePath":"C:\\Program Files\\Discord\\Discord.exe","protocol":"BOTH","action":"BLOCK","enabled":true,"priority":1}]}` {
+	if string(payload) != `{"version":1,"command":"replace_rules","proxy":{"host":"127.0.0.1","port":7891},"failClosed":true,"proxyUdpDns":false,"diagnosticLogging":false,"rules":[{"executablePath":"C:\\Program Files\\Discord\\Discord.exe","protocol":"BOTH","action":"BLOCK","enabled":true,"priority":1}]}` {
 		t.Fatalf("unexpected router command payload: %s", payload)
 	}
 }
