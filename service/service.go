@@ -47,20 +47,16 @@ func (c Controller) Status() (Status, error) {
 	}
 }
 
+func (c Controller) Start() error {
+	return startService()
+}
+
 func (c Controller) Stop() error {
-	svc, err := newControlService()
-	if err != nil {
-		return err
-	}
-	return svc.Stop()
+	return stopService()
 }
 
 func (c Controller) Restart() error {
-	svc, err := newControlService()
-	if err != nil {
-		return err
-	}
-	return svc.Restart()
+	return restartService()
 }
 
 func newControlService() (kservice.Service, error) {

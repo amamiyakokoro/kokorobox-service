@@ -21,11 +21,17 @@ go build -o kokorobox-service .
 go test ./...
 ```
 
-Install with administrator privileges on Windows or root privileges on Linux and macOS:
+Install with administrator privileges on Windows or root privileges on Linux:
 
 ```bash
 kokorobox-service service install
 ```
+
+On macOS 13 and later, KokoroBox Desktop embeds the executable and registers it as a privileged
+LaunchDaemon with `SMAppService`. Registration and removal therefore belong to the signed host app;
+the service CLI's `start`, `stop`, `restart`, `status`, and `init` commands control the registered
+`system/KokoroBoxService` launchd job without depending on a copied plist in
+`/Library/LaunchDaemons`.
 
 On Windows, `service install` copies the executable and its verified Process Router bundle into a
 content-addressed directory below `%ProgramFiles%\KokoroBox Service` before registering it with the
