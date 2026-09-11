@@ -32,12 +32,7 @@ func New(program kservice.Interface, executablePath string) (kservice.Service, e
 }
 
 func (c Controller) Status() (Status, error) {
-	svc, err := newControlService()
-	if err != nil {
-		return StatusUnknown, err
-	}
-
-	status, err := svc.Status()
+	status, err := queryServiceStatus()
 	if err != nil {
 		return StatusUnknown, fmt.Errorf("Failed to query service status：%w", err)
 	}

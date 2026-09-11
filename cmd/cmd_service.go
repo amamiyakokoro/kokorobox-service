@@ -238,22 +238,12 @@ var serviceStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: i18n.DefaultText("Show KokoroBox Service status"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, "")
-		if err != nil {
-			return outputServiceCommandError("status", "Failed to create service", err)
-		}
-
-		status, err := s.Status()
+		status, err := (appservice.Controller{}).Status()
 		if err != nil {
 			return outputServiceCommandError("status", "Failed to query service status", err)
 		}
 
-		state := normalizeServiceStatus(status)
+		state := string(status)
 		return outputServiceCommandResult(serviceStatusMessage(state), serviceCommandStatus{Action: "status", State: state})
 	},
 }
