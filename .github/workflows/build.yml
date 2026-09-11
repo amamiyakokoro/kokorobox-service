@@ -41,11 +41,7 @@ jobs:
     strategy:
       matrix:
         jobs:
-          # macOS x64 applications can run under Rosetta on Apple Silicon. Keep
-          # this binary at the baseline ISA because Rosetta does not implement
-          # every GOAMD64=v3 instruction and the service would exit before
-          # creating its Unix socket.
-          - { goos: darwin, goarch: amd64, goamd64: v1, output: amd64 }
+          - { goos: darwin, goarch: amd64, goamd64: v3, output: amd64-v3 }
           - { goos: darwin, goarch: arm64, output: arm64 }
 
           - { goos: linux, goarch: amd64, goamd64: v3, output: amd64-v3 }

@@ -66,9 +66,6 @@ Desktop builds pin an independent service release such as `v0.1.0`; stable tags 
 must never be moved or replaced. Every release binary is accompanied by a `.sha256` file, which
 Desktop verifies before packaging the service.
 
-The macOS amd64 release uses the baseline `GOAMD64=v1` ISA so the x64 application remains usable
-under Rosetta as well as on Intel Macs. Linux and Windows amd64 releases continue to use `v3`.
-
 Create stable releases with a `vMAJOR.MINOR.PATCH` tag. Until the service reaches `v1.0.0`, bump the
 minor version for incompatible CLI, API, authentication, or wire-format changes, and the patch
 version for compatible fixes. Service versions are independent from KokoroBox Desktop versions.
