@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -45,6 +46,8 @@ type KeyManager struct {
 
 var globalKeyManager *KeyManager
 var kmOnce sync.Once
+
+var ErrAlreadyInitialized = errors.New("service authentication is already initialized")
 
 func GetKeyManager() *KeyManager {
 	kmOnce.Do(func() {
@@ -349,6 +352,95 @@ func (km *KeyManager) SetPublicKey(pubKeyBase64 string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func writeBootstrapFile(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".kokorobox-bootstrap-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+
+	// Link rather than rename so a concurrent or legacy initializer cannot be
+	// overwritten between the existence check and commit.
+	if err := os.Link(tmpPath, path); err != nil {
+		return err
+	}
+	return nil
+}
+
+// BootstrapPublicKeyForUID performs the one-time macOS authentication setup.
+// The caller UID must come from kernel-provided peer credentials, never from
+// request data. Existing state is never replaced through this entry point.
+func (km *KeyManager) BootstrapPublicKeyForUID(pubKeyBase64 string, uid uint32) error {
+	normalizedPublicKey, parsedPublicKey, err := parsePublicKey(pubKeyBase64)
+	if err != nil {
+		return err
+	}
+	keyID, err := computeKeyID(normalizedPublicKey)
+	if err != nil {
+		return err
+	}
+	principal := AuthorizedPrincipal{
+		Type:  "uid",
+		Value: strconv.FormatUint(uint64(uid), 10),
+	}
+	if err := validateAuthorizedPrincipal(&principal); err != nil {
+		return err
+	}
+	currentKey := &storedPublicKey{KeyID: keyID, PublicKey: normalizedPublicKey}
+	keyData, err := json.MarshalIndent(keyRing{Current: currentKey}, "", "  ")
+	if err != nil {
+		return fmt.Errorf("serialize bootstrap public key: %w", err)
+	}
+	principalData, err := json.MarshalIndent(principal, "", "  ")
+	if err != nil {
+		return fmt.Errorf("serialize bootstrap principal: %w", err)
+	}
+
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	if km.currentKey != nil || km.authorizedPrincipal != nil {
+		return ErrAlreadyInitialized
+	}
+	if _, err := os.Lstat(km.keyRingPath); err == nil || !os.IsNotExist(err) {
+		return fmt.Errorf("bootstrap public key state already exists")
+	}
+	if _, err := os.Lstat(km.principalPath); err == nil || !os.IsNotExist(err) {
+		return fmt.Errorf("bootstrap principal state already exists")
+	}
+
+	if err := writeBootstrapFile(km.keyRingPath, keyData); err != nil {
+		return fmt.Errorf("save bootstrap public key: %w", err)
+	}
+	if err := writeBootstrapFile(km.principalPath, principalData); err != nil {
+		_ = os.Remove(km.keyRingPath)
+		return fmt.Errorf("save bootstrap principal: %w", err)
+	}
+
+	km.currentKey = currentKey
+	km.previousKey = nil
+	km.publicKeys = map[string]ed25519.PublicKey{keyID: parsedPublicKey}
+	km.authorizedPrincipal = new(principal)
+	return nil
 }
 
 func validateAuthorizedPrincipal(principal *AuthorizedPrincipal) error {

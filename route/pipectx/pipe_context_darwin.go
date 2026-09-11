@@ -7,16 +7,21 @@ import (
 	"net"
 	"net/http"
 	"syscall"
+	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
 
 type darwinPeerContextKey struct{}
 
+type AuditToken [8]uint32
+
 type DarwinPeerInfo struct {
-	UID    uint32
-	GID    uint32
-	HasGID bool
+	PID        int
+	UID        uint32
+	GID        uint32
+	HasGID     bool
+	AuditToken AuditToken
 }
 
 type syscallConn interface {
@@ -53,7 +58,25 @@ func getDarwinPeerInfo(conn net.Conn) (DarwinPeerInfo, bool) {
 		if sockErr != nil || cred == nil {
 			return
 		}
-		info = DarwinPeerInfo{UID: cred.Uid}
+		pid, pidErr := unix.GetsockoptInt(int(fd), unix.SOL_LOCAL, unix.LOCAL_PEERPID)
+		if pidErr != nil || pid <= 0 {
+			return
+		}
+		var token AuditToken
+		tokenSize := uint32(unsafe.Sizeof(token))
+		_, _, tokenErr := unix.Syscall6(
+			unix.SYS_GETSOCKOPT,
+			fd,
+			uintptr(unix.SOL_LOCAL),
+			uintptr(unix.LOCAL_PEERTOKEN),
+			uintptr(unsafe.Pointer(&token[0])),
+			uintptr(unsafe.Pointer(&tokenSize)),
+			0,
+		)
+		if tokenErr != 0 || tokenSize != uint32(unsafe.Sizeof(token)) {
+			return
+		}
+		info = DarwinPeerInfo{PID: pid, UID: cred.Uid, AuditToken: token}
 		if cred.Ngroups > 0 {
 			info.GID = cred.Groups[0]
 			info.HasGID = true
@@ -63,10 +86,10 @@ func getDarwinPeerInfo(conn net.Conn) (DarwinPeerInfo, bool) {
 		return DarwinPeerInfo{}, false
 	}
 
-	return info, okay
+	return info, okay && info.PID > 0
 }
 
 func RequestDarwinPeerInfo(r *http.Request) (DarwinPeerInfo, bool) {
 	info, ok := r.Context().Value(darwinPeerContextKey{}).(DarwinPeerInfo)
-	return info, ok
+	return info, ok && info.PID > 0
 }

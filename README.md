@@ -37,6 +37,14 @@ the service CLI's `start`, `stop`, `restart`, `status`, and `init` commands cont
 restart in the same privileged process. Desktop clients use it to avoid requesting administrator
 authorization twice during first-time setup.
 
+The preferred macOS path no longer launches that CLI. A freshly approved daemon exposes a
+one-time `POST /bootstrap` operation on its Unix socket. The daemon obtains the caller UID and
+audit token from the kernel, validates the live client against the Developer ID requirement for
+`com.amamiyakokoro.app` and team `755TNLRN92`, commits the public key and UID without replacing
+existing state, then restricts the socket to that UID with mode `0600`. Request data can never
+select the authorized UID, and Linux and Windows do not expose this endpoint. The elevated CLI is
+retained only for explicit recovery and compatibility.
+
 On Windows, `service install` copies the executable and its verified Process Router bundle into a
 content-addressed directory below `%ProgramFiles%\KokoroBox Service` before registering it with the
 Service Control Manager. This keeps the privileged runtime outside user-writable Desktop

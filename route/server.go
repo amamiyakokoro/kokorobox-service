@@ -173,7 +173,7 @@ func StartHTTP(addr string) error {
 	}
 	log.Printf("http Listen address: %s", addr)
 	server := &http.Server{
-		Handler: router(),
+		Handler: router(""),
 	}
 	return server.Serve(l)
 }
@@ -192,6 +192,15 @@ func StartUnix(addr string) error {
 			_ = l.Close()
 			return fmt.Errorf("设置 unix socket 权限失败：%w", err)
 		}
+	} else if runtime.GOOS == "darwin" {
+		// Before authentication exists, the signed Desktop process reaches the
+		// one-time bootstrap route through this socket. The route verifies the
+		// kernel peer PID and Developer ID signature before accepting a key, then
+		// immediately changes the socket to owner-only mode.
+		if err := os.Chmod(addr, 0o666); err != nil {
+			_ = l.Close()
+			return fmt.Errorf("设置 bootstrap unix socket 权限失败：%w", err)
+		}
 	} else if err := os.Chmod(addr, 0o600); err != nil {
 		_ = l.Close()
 		return fmt.Errorf("设置 unix socket 权限失败：%w", err)
@@ -199,7 +208,7 @@ func StartUnix(addr string) error {
 	log.Printf("unix Listen address: %s", l.Addr().String())
 
 	server := &http.Server{
-		Handler: router(),
+		Handler: router(addr),
 	}
 	pipectx.ConfigureServer(server)
 	serverMu.Lock()
@@ -221,7 +230,7 @@ func StartPipe(addr string) error {
 	log.Printf("pipe Listen address: %s", l.Addr().String())
 
 	server := &http.Server{
-		Handler: router(),
+		Handler: router(""),
 	}
 	pipectx.ConfigureServer(server)
 	serverMu.Lock()
