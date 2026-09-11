@@ -2,6 +2,7 @@ package route
 
 import (
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
+	"github.com/amamiyakokoro/kokorobox-service/route/bootstrap"
 	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 	"github.com/amamiyakokoro/kokorobox-service/route/processrouterapi"
@@ -14,7 +15,7 @@ import (
 	"github.com/go-chi/render"
 )
 
-func router() *chi.Mux {
+func router(bootstrapSocketPath string) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(httphelper.LocaleMiddleware)
@@ -25,6 +26,7 @@ func router() *chi.Mux {
 			httphelper.SendJSON(w, "success", "pong")
 		})
 	})
+	bootstrap.Register(r, bootstrapSocketPath)
 
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware)
