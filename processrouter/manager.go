@@ -186,6 +186,31 @@ func (m *Manager) Cleanup() error {
 	return errors.Join(stopErr, firewallErr, removeErr)
 }
 
+// RepairFirewall verifies and, when necessary, recreates the platform firewall
+// policy without changing whether application routing is enabled. It is safe
+// to invoke while the router is stopped or running.
+func (m *Manager) RepairFirewall() error {
+	if !Supported() {
+		return ErrUnsupported
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if err := verifyProcessRouterIntegrity(m.binaryDir); err != nil {
+		return err
+	}
+	if err := m.ensureFirewallLocked(true); err != nil {
+		wrapped := fmt.Errorf("application-routing firewall repair failed: %w", err)
+		if m.desired {
+			stopErr := m.stopProcessLocked()
+			m.setErrorLocked(wrapped)
+			return errors.Join(wrapped, stopErr)
+		}
+		return wrapped
+	}
+	return nil
+}
+
 func (m *Manager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

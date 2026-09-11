@@ -28,6 +28,7 @@ func Router() http.Handler {
 	r.Post("/stop", stop)
 	r.Put("/rules", replaceRules)
 	r.Get("/status", status)
+	r.Post("/firewall/repair", repairFirewall)
 	r.Post("/cleanup", cleanup)
 	return r
 }
@@ -69,6 +70,14 @@ func replaceRules(w http.ResponseWriter, r *http.Request) {
 
 func status(w http.ResponseWriter, r *http.Request) {
 	manager.RenewLease()
+	render.JSON(w, r, manager.Status())
+}
+
+func repairFirewall(w http.ResponseWriter, r *http.Request) {
+	if err := manager.RepairFirewall(); err != nil {
+		sendManagerError(w, err)
+		return
+	}
 	render.JSON(w, r, manager.Status())
 }
 
