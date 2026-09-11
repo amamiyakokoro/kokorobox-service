@@ -87,19 +87,6 @@ func serviceErrorState(err error) string {
 	return ""
 }
 
-func normalizeServiceStatus(status kservice.Status) string {
-	switch status {
-	case kservice.StatusRunning:
-		return "running"
-	case kservice.StatusStopped:
-		return "stopped"
-	case kservice.StatusUnknown:
-		return "unknown"
-	default:
-		return "unknown"
-	}
-}
-
 func serviceStatusMessage(state string) string {
 	switch state {
 	case "running":
@@ -175,17 +162,7 @@ var serviceStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: i18n.DefaultText("Start KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, "")
-		if err != nil {
-			return outputServiceCommandError("start", "Failed to create service", err)
-		}
-
-		if err := s.Start(); err != nil {
+		if err := (appservice.Controller{}).Start(); err != nil {
 			return outputServiceCommandError("start", "Failed to start service", err)
 		}
 		return outputServiceCommandResult("Service started successfully", serviceCommandStatus{Action: "start", State: "running"})
@@ -196,17 +173,7 @@ var serviceStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: i18n.DefaultText("Stop KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, "")
-		if err != nil {
-			return outputServiceCommandError("stop", "Failed to create service", err)
-		}
-
-		if err := s.Stop(); err != nil {
+		if err := (appservice.Controller{}).Stop(); err != nil {
 			return outputServiceCommandError("stop", "Failed to stop service", err)
 		}
 		return outputServiceCommandResult("Service stopped successfully", serviceCommandStatus{Action: "stop", State: "stopped"})
@@ -217,17 +184,7 @@ var serviceRestartCmd = &cobra.Command{
 	Use:   "restart",
 	Short: i18n.DefaultText("Restart KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, "")
-		if err != nil {
-			return outputServiceCommandError("restart", "Failed to create service", err)
-		}
-
-		if err := s.Restart(); err != nil {
+		if err := (appservice.Controller{}).Restart(); err != nil {
 			return outputServiceCommandError("restart", "Failed to restart service", err)
 		}
 		return outputServiceCommandResult("Service restarted successfully", serviceCommandStatus{Action: "restart", State: "running"})
@@ -325,28 +282,19 @@ var serviceInitCmd = &cobra.Command{
 			_ = outputServiceCommandResult("Service initialized; authentication configuration unchanged", serviceCommandStatus{Action: "init"})
 		}
 
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, "")
-		if err != nil {
-			return outputServiceCommandError("init", "Failed to create service", err)
-		}
-
-		status, err := s.Status()
+		controller := appservice.Controller{}
+		status, err := controller.Status()
 		if err != nil {
 			return outputServiceCommandError("status", "Failed to query service status; if the service is running, run 'restart' manually", err)
 		}
 
-		state := normalizeServiceStatus(status)
-		if status == kservice.StatusRunning {
+		state := string(status)
+		if status == appservice.StatusRunning {
 			if !changed {
 				return outputServiceCommandResult("Service is already running; configuration is unchanged and no restart is needed", serviceCommandStatus{Action: "init", State: state})
 			}
 			log.S().Infow("Restarting service...", "status", serviceCommandStatus{Action: "restart", State: state, Success: true})
-			if err := s.Restart(); err != nil {
+			if err := controller.Restart(); err != nil {
 				return outputServiceCommandError("restart", "Failed to restart service; run 'kokorobox-service service restart' manually", err)
 			}
 			return outputServiceCommandResult("Service restarted successfully", serviceCommandStatus{Action: "restart", State: "running"})
