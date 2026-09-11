@@ -195,6 +195,7 @@ func (m *Manager) RepairFirewall() error {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.lastContact = time.Now()
 
 	if err := verifyProcessRouterIntegrity(m.binaryDir); err != nil {
 		return err
