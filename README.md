@@ -47,6 +47,17 @@ the privileged ACL there. It does not make the user's application directory read
 Supports `en` (default), `zh-CN`, and `zh-TW`. Set `KOKOROBOX_LOCALE` or use `--locale`; HTTP
 clients can use `Accept-Language`.
 
+## Releases
+
+Pushes to `main` update the mutable `pre-release` used by KokoroBox Desktop rolling builds. Stable
+Desktop builds pin an independent service release such as `v0.1.0`; stable tags and their assets
+must never be moved or replaced. Every release binary is accompanied by a `.sha256` file, which
+Desktop verifies before packaging the service.
+
+Create stable releases with a `vMAJOR.MINOR.PATCH` tag. Until the service reaches `v1.0.0`, bump the
+minor version for incompatible CLI, API, authentication, or wire-format changes, and the patch
+version for compatible fixes. Service versions are independent from KokoroBox Desktop versions.
+
 ## Upstream
 
 - [UruhaLushia/sysproxy-go](https://github.com/UruhaLushia/sysproxy-go) powers system-proxy integration.

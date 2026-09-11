@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Tag version to release"
-        required: true
+        description: "Optional v-prefixed SemVer tag to release"
+        required: false
   pull_request:
     paths-ignore:
       - "docs/**"
@@ -68,10 +68,12 @@ jobs:
       run: |
         go env
         if [ "${{ matrix.jobs.goos }}" == "windows" ]; then
-          go build -ldflags "-extldflags --static -w -s -buildid=" -o kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          artifact=kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
         else
-          go build -ldflags "-extldflags --static -w -s -buildid=" -o kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          artifact=kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
+        go build -trimpath -ldflags "-extldflags --static -w -s -buildid=" -o "$artifact"
+        sha256sum "$artifact" > "$artifact.sha256"
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v7
@@ -81,7 +83,10 @@ jobs:
           kokorobox-service-${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}*
 
   pre-release:
-    if: github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request' &&
+      !startsWith(github.ref, 'refs/tags/v') &&
+      !(github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
@@ -116,28 +121,57 @@ jobs:
           prerelease: true
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.version != '' && github.event.inputs.version || github.ref_name }}
     steps:
       - uses: actions/download-artifact@v8
         with:
           path: bin/
           merge-multiple: true
 
-      - name: Delete Current
-        uses: 8Mi-Tech/delete-release-assets-action@main
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid release tag: $RELEASE_TAG"
+            exit 1
+          fi
+
+      - name: Check existing release and tag
+        uses: actions/github-script@v8
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.event.inputs.version != '' && github.event.inputs.version || github.ref }}
-          deleteOnlyFromDrafts: false
+          script: |
+            const tag = process.env.RELEASE_TAG;
+            try {
+              await github.rest.repos.getReleaseByTag({ ...context.repo, tag });
+              throw new Error(`Release ${tag} already exists and cannot be replaced.`);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            try {
+              const { data } = await github.rest.repos.getCommit({
+                ...context.repo,
+                ref: `refs/tags/${tag}`
+              });
+              if (data.sha !== context.sha) {
+                throw new Error(`Tag ${tag} points to a different commit.`);
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
 
       - name: Publish Release
         if: success()
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.inputs.version != '' && github.event.inputs.version || github.ref }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             bin/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          overwrite_files: false
