@@ -234,6 +234,27 @@ var serviceCmd = &cobra.Command{
 	Short: i18n.DefaultText("Manage KokoroBox Service"),
 }
 
+type serviceInitTransition int
+
+const (
+	serviceInitNoAction serviceInitTransition = iota
+	serviceInitStart
+	serviceInitRestart
+)
+
+func serviceInitNextTransition(status appservice.Status, changed, ensureRunning bool) serviceInitTransition {
+	if status == appservice.StatusRunning {
+		if changed {
+			return serviceInitRestart
+		}
+		return serviceInitNoAction
+	}
+	if ensureRunning {
+		return serviceInitStart
+	}
+	return serviceInitNoAction
+}
+
 var serviceInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: i18n.DefaultText("Initialize the service with a public key"),
@@ -241,6 +262,7 @@ var serviceInitCmd = &cobra.Command{
 		publicKey := cmd.Flag("public-key").Value.String()
 		authorizedSID := cmd.Flag("authorized-sid").Value.String()
 		authorizedUID, _ := cmd.Flags().GetUint32("authorized-uid")
+		ensureRunning, _ := cmd.Flags().GetBool("ensure-running")
 		if publicKey == "" {
 			return outputServiceCommandError("init", "Error: a public key must be provided with --public-key", errors.New("A public key must be provided with --public-key"))
 		}
@@ -289,15 +311,23 @@ var serviceInitCmd = &cobra.Command{
 		}
 
 		state := string(status)
-		if status == appservice.StatusRunning {
-			if !changed {
-				return outputServiceCommandResult("Service is already running; configuration is unchanged and no restart is needed", serviceCommandStatus{Action: "init", State: state})
-			}
+		switch serviceInitNextTransition(status, changed, ensureRunning) {
+		case serviceInitRestart:
 			log.S().Infow("Restarting service...", "status", serviceCommandStatus{Action: "restart", State: state, Success: true})
 			if err := controller.Restart(); err != nil {
 				return outputServiceCommandError("restart", "Failed to restart service; run 'kokorobox-service service restart' manually", err)
 			}
 			return outputServiceCommandResult("Service restarted successfully", serviceCommandStatus{Action: "restart", State: "running"})
+		case serviceInitStart:
+			log.S().Infow("Starting service...", "status", serviceCommandStatus{Action: "start", State: state, Success: true})
+			if err := controller.Start(); err != nil {
+				return outputServiceCommandError("start", "Failed to start service", err)
+			}
+			return outputServiceCommandResult("Service initialized and started successfully", serviceCommandStatus{Action: "start", State: "running", Changed: changed})
+		}
+
+		if status == appservice.StatusRunning {
+			return outputServiceCommandResult("Service is already running; configuration is unchanged and no restart is needed", serviceCommandStatus{Action: "init", State: state})
 		}
 
 		return outputServiceCommandResult("Service is not running; configuration will apply on the next start", serviceCommandStatus{Action: "init", State: state, Changed: changed})
@@ -317,4 +347,5 @@ func init() {
 	serviceInitCmd.Flags().StringP("public-key", "k", "", i18n.DefaultText("Client public key"))
 	serviceInitCmd.Flags().String("authorized-sid", "", i18n.DefaultText("Windows SID allowed to access the service"))
 	serviceInitCmd.Flags().Uint32("authorized-uid", 0, i18n.DefaultText("Unix UID allowed to access the service"))
+	serviceInitCmd.Flags().Bool("ensure-running", false, i18n.DefaultText("Start the service after initialization when it is not running"))
 }

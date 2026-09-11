@@ -33,6 +33,10 @@ the service CLI's `start`, `stop`, `restart`, `status`, and `init` commands cont
 `system/KokoroBoxService` launchd job without depending on a copied plist in
 `/Library/LaunchDaemons`.
 
+`service init --ensure-running` performs authentication initialization and the required start or
+restart in the same privileged process. Desktop clients use it to avoid requesting administrator
+authorization twice during first-time setup.
+
 On Windows, `service install` copies the executable and its verified Process Router bundle into a
 content-addressed directory below `%ProgramFiles%\KokoroBox Service` before registering it with the
 Service Control Manager. This keeps the privileged runtime outside user-writable Desktop
