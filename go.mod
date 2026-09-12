@@ -27,4 +27,4 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 )
 
-replace github.com/UruhaLushia/sysproxy-go => github.com/amamiyakokoro/sysproxy-go v1.0.3
+replace github.com/UruhaLushia/sysproxy-go => github.com/amamiyakokoro/sysproxy-go v1.0.4
