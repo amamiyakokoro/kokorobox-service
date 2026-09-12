@@ -548,7 +548,9 @@ func supportsLinuxCgroupMatcher(option string) bool {
 	if err != nil {
 		return false
 	}
-	output, _ := exec.Command(path, "-m", "cgroup", "--help").CombinedOutput()
+	command := exec.Command(path, "-m", "cgroup", "--help")
+	command.Args[0] = "iptables"
+	output, _ := command.CombinedOutput()
 	return strings.Contains(string(output), option)
 }
 
@@ -573,7 +575,12 @@ func runLinuxCommand(name string, args ...string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, path, args...).CombinedOutput()
+	command := exec.CommandContext(ctx, path, args...)
+	// Preserve the requested tool name for alternatives and multicall binaries
+	// such as openSUSE's /usr/bin/alts. The executable path remains the fully
+	// resolved and validated path returned by secureLinuxCommand.
+	command.Args[0] = name
+	output, err := command.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(string(output)))
 	}
