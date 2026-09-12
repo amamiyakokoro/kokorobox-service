@@ -44,7 +44,7 @@ type linuxNativeProcess struct {
 	firewallReady   bool
 	proxyUDPDNS     bool
 	proxyPort       int
-	targets         map[string]string
+	targets         []linuxProcessTarget
 	assigned        map[int]string
 	originalCgroups map[int]string
 }
@@ -52,6 +52,13 @@ type linuxNativeProcess struct {
 type linuxProcessSnapshot struct {
 	pid            int
 	executablePath string
+	executableName string
+}
+
+type linuxProcessTarget struct {
+	matchKind string
+	pattern   string
+	group     string
 }
 
 func hardenProcessRouterPaths(_ string, configDir string) error {
@@ -93,7 +100,6 @@ func startNativeProcess(string, string) (nativeProcess, error) {
 		done:            make(chan struct{}),
 		cancel:          cancel,
 		alive:           true,
-		targets:         make(map[string]string),
 		assigned:        make(map[int]string),
 		originalCgroups: make(map[int]string),
 	}
@@ -145,7 +151,7 @@ func (p *linuxNativeProcess) Send(payload []byte) error {
 		}
 	}
 
-	targets := make(map[string]string)
+	targets := make([]linuxProcessTarget, 0, len(command.Rules))
 	for _, rule := range command.Rules {
 		if !rule.Enabled {
 			continue
@@ -156,7 +162,11 @@ func (p *linuxNativeProcess) Send(payload []byte) error {
 		if err := validateLinuxRoutingGroup(group); err != nil {
 			return err
 		}
-		targets[rule.ProcessPattern] = group
+		targets = append(targets, linuxProcessTarget{
+			matchKind: rule.MatchKind,
+			pattern:   rule.ProcessPattern,
+			group:     group,
+		})
 	}
 	p.targets = targets
 	if err := p.scanProcessesLocked(); err != nil {
@@ -255,7 +265,7 @@ func (p *linuxNativeProcess) applyProcessSnapshotLocked(snapshot []linuxProcessS
 	var scanErr error
 	for _, process := range snapshot {
 		pid := process.pid
-		group, matches := p.targets[process.executablePath]
+		group, matches := p.targetGroup(process)
 		if !matches {
 			if _, assigned := p.assigned[pid]; assigned {
 				scanErr = errors.Join(scanErr, p.restoreProcessLocked(pid))
@@ -292,6 +302,21 @@ func (p *linuxNativeProcess) applyProcessSnapshotLocked(snapshot []linuxProcessS
 	return scanErr
 }
 
+func (p *linuxNativeProcess) targetGroup(process linuxProcessSnapshot) (string, bool) {
+	for _, target := range p.targets {
+		if target.matchKind == matchProcessName {
+			if target.pattern == process.executableName {
+				return target.group, true
+			}
+			continue
+		}
+		if target.pattern == process.executablePath {
+			return target.group, true
+		}
+	}
+	return "", false
+}
+
 func snapshotLinuxProcesses() ([]linuxProcessSnapshot, error) {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
@@ -313,6 +338,7 @@ func snapshotLinuxProcesses() ([]linuxProcessSnapshot, error) {
 		snapshot = append(snapshot, linuxProcessSnapshot{
 			pid:            pid,
 			executablePath: executablePath,
+			executableName: filepath.Base(executablePath),
 		})
 	}
 	return snapshot, nil

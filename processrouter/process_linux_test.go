@@ -29,7 +29,11 @@ func TestApplyProcessSnapshotLockedAssignsMatchingProcess(t *testing.T) {
 			mountPoint:  tempDir,
 			managedRoot: filepath.Join(tempDir, linuxCgroupName),
 		},
-		targets:         map[string]string{executablePath: group},
+		targets: []linuxProcessTarget{{
+			matchKind: matchExecutablePath,
+			pattern:   executablePath,
+			group:     group,
+		}},
 		assigned:        make(map[int]string),
 		originalCgroups: make(map[int]string),
 	}
@@ -38,6 +42,7 @@ func TestApplyProcessSnapshotLockedAssignsMatchingProcess(t *testing.T) {
 	if err := process.applyProcessSnapshotLocked([]linuxProcessSnapshot{{
 		pid:            pid,
 		executablePath: executablePath,
+		executableName: filepath.Base(executablePath),
 	}}); err != nil {
 		t.Fatal(err)
 	}

@@ -10,12 +10,14 @@ import (
 )
 
 const (
-	ProtocolVersion  = 1
-	WindowsProxyPort = 7891
-	LinuxProxyPort   = 7894
-	DNSPort          = 7892
-	maxRules         = 256
-	maxPathBytes     = 1023
+	ProtocolVersion     = 1
+	WindowsProxyPort    = 7891
+	LinuxProxyPort      = 7894
+	DNSPort             = 7892
+	maxRules            = 256
+	maxPathBytes        = 1023
+	matchExecutablePath = "executable_path"
+	matchProcessName    = "process_name"
 )
 
 var (
@@ -49,6 +51,7 @@ func (e *ValidationError) Unwrap() error { return e.Err }
 
 type Rule struct {
 	ID             string `json:"id"`
+	MatchKind      string `json:"match_kind,omitempty"`
 	ExecutablePath string `json:"executable_path"`
 	ExecutableName string `json:"executable_name"`
 	Protocol       string `json:"protocol"`
@@ -99,6 +102,7 @@ type persistedConfig struct {
 
 type routerRule struct {
 	ProcessPattern string `json:"processPattern"`
+	MatchKind      string `json:"matchKind,omitempty"`
 	Protocol       string `json:"protocol"`
 	Action         string `json:"action"`
 	Enabled        bool   `json:"enabled"`
@@ -156,10 +160,17 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 	totalPathBytes := 0
 	for index := range rules {
 		rule := &rules[index]
+		if rule.MatchKind == "" {
+			rule.MatchKind = matchExecutablePath
+		}
 		if err := validateRule(*rule, request.Platform); err != nil {
 			return RulesRequest{}, fmt.Errorf("invalid rule %d: %w", index+1, err)
 		}
-		pathKey := rule.ExecutablePath
+		identifier := rule.ExecutablePath
+		if rule.MatchKind == matchProcessName {
+			identifier = rule.ExecutableName
+		}
+		pathKey := rule.MatchKind + "\x00" + identifier
 		if request.Platform == "windows" {
 			pathKey = strings.ToLower(pathKey)
 		}
@@ -175,7 +186,7 @@ func normalizeRulesRequest(request RulesRequest) (RulesRequest, error) {
 		ids[rule.ID] = struct{}{}
 		paths[pathKey] = struct{}{}
 		priorities[rule.Priority] = struct{}{}
-		totalPathBytes += len([]byte(rule.ExecutablePath)) + 1
+		totalPathBytes += len([]byte(identifier)) + 1
 		if totalPathBytes > 30000 {
 			return RulesRequest{}, errors.New("application routing paths are too large")
 		}
@@ -192,17 +203,39 @@ func validateRule(rule Rule, platform string) error {
 	}
 	name := ""
 	if platform == "linux" {
-		if !validLinuxExecutablePath(rule.ExecutablePath) {
-			return errors.New("executable_path must be an absolute canonical Linux executable path")
+		switch rule.MatchKind {
+		case matchExecutablePath:
+			if !validLinuxExecutablePath(rule.ExecutablePath) {
+				return errors.New("executable_path must be an absolute canonical Linux executable path")
+			}
+			name = path.Base(rule.ExecutablePath)
+		case matchProcessName:
+			if !validLinuxProcessName(rule.ExecutableName) {
+				return errors.New("executable_name must contain a valid Linux process name")
+			}
+			if rule.ExecutablePath != "" {
+				if !validLinuxExecutablePath(rule.ExecutablePath) {
+					return errors.New("executable_path must be empty or an absolute canonical Linux executable path")
+				}
+				if path.Base(rule.ExecutablePath) != rule.ExecutableName {
+					return errors.New("executable_name does not match executable_path")
+				}
+			}
+			name = rule.ExecutableName
+		default:
+			return errors.New("unsupported Linux match_kind")
 		}
-		name = path.Base(rule.ExecutablePath)
 	} else {
+		if rule.MatchKind != matchExecutablePath {
+			return errors.New("Windows rules require executable_path matching")
+		}
 		if !validWindowsExecutablePattern(rule.ExecutablePath) {
 			return errors.New("executable_path must be a Windows .exe filename or absolute path pattern")
 		}
 		name = windowsBaseName(rule.ExecutablePath)
 	}
-	if name == "" || !strings.EqualFold(name, rule.ExecutableName) {
+	if rule.MatchKind == matchExecutablePath &&
+		(name == "" || !strings.EqualFold(name, rule.ExecutableName)) {
 		return errors.New("executable_name does not match executable_path")
 	}
 	if isProtectedProcessPattern(name) {
@@ -228,6 +261,18 @@ func validLinuxExecutablePath(value string) bool {
 		return false
 	}
 	return !strings.ContainsAny(value, "*?;,\r\n")
+}
+
+func validLinuxProcessName(value string) bool {
+	if value == "" || value == "." || value == ".." || len([]byte(value)) > 255 {
+		return false
+	}
+	for _, character := range value {
+		if character < 32 || character == 127 || strings.ContainsRune("/*?;,", character) {
+			return false
+		}
+	}
+	return true
 }
 
 func validWindowsExecutablePattern(value string) bool {
@@ -339,8 +384,17 @@ func buildRouterCommand(request RulesRequest, proxyAvailable bool) routerCommand
 		if rule.Action == "proxy" && !proxyAvailable {
 			action = "BLOCK"
 		}
+		matchKind := ""
+		if rule.MatchKind == matchProcessName {
+			matchKind = matchProcessName
+		}
+		processPattern := rule.ExecutablePath
+		if rule.MatchKind == matchProcessName {
+			processPattern = rule.ExecutableName
+		}
 		rules = append(rules, routerRule{
-			ProcessPattern: rule.ExecutablePath,
+			ProcessPattern: processPattern,
+			MatchKind:      matchKind,
 			Protocol:       strings.ToUpper(rule.Protocol),
 			Action:         action,
 			Enabled:        rule.Enabled,
