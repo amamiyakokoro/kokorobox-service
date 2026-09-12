@@ -72,7 +72,7 @@ version for compatible fixes. Service versions are independent from KokoroBox De
 
 ## Upstream
 
-- [UruhaLushia/sysproxy-go](https://github.com/UruhaLushia/sysproxy-go) powers system-proxy integration.
+- [amamiyakokoro/sysproxy-go](https://github.com/amamiyakokoro/sysproxy-go) powers system-proxy integration.
 
 ## License
 
