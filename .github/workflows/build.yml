@@ -105,7 +105,7 @@ jobs:
           deleteOnlyFromDrafts: false
 
       - name: Tag Repo
-        uses: richardsimko/update-tag@v1
+        uses: richardsimko/update-tag@v3
         with:
           tag_name: pre-release
         env:
