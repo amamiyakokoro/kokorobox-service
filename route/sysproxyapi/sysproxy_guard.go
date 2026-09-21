@@ -22,6 +22,7 @@ const (
 type sysproxyGuardRunner interface {
 	Query(*sysproxy.Options) (*sysproxy.ProxyConfig, error)
 	Apply(sysproxyGuardMode, *sysproxy.Options) error
+	Disable(*sysproxy.Options) error
 	WaitChange(context.Context, *sysproxy.Options) error
 	WaitChangeReady(context.Context, *sysproxy.Options, func()) error
 	Close() error

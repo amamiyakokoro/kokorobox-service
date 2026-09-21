@@ -45,6 +45,10 @@ func (r *linuxSysproxyGuardRunner) Apply(mode sysproxyGuardMode, opts *sysproxy.
 	return applySysproxyGuardSettings(mode, r.sessionOptions(opts))
 }
 
+func (r *linuxSysproxyGuardRunner) Disable(opts *sysproxy.Options) error {
+	return sysproxy.DisableProxy(r.sessionOptions(opts))
+}
+
 func (r *linuxSysproxyGuardRunner) WaitChange(ctx context.Context, opts *sysproxy.Options) error {
 	return sysproxy.WaitProxySettingsChange(ctx, r.sessionOptions(opts))
 }

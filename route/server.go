@@ -86,7 +86,9 @@ func Start(addr string) error {
 
 func Stop() error {
 	var errs []error
-	sysproxyapi.StopGuard()
+	if err := sysproxyapi.StopManagedProxy(); err != nil {
+		errs = append(errs, fmt.Errorf("清理系统代理失败：%w", err))
+	}
 	if err := processrouterapi.Stop(); err != nil {
 		errs = append(errs, fmt.Errorf("停止应用分流失败：%w", err))
 	}

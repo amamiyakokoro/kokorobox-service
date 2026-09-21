@@ -66,6 +66,10 @@ func (windowsSysproxyGuardRunner) Apply(mode sysproxyGuardMode, opts *sysproxy.O
 	return applySysproxyGuardSettings(mode, opts)
 }
 
+func (windowsSysproxyGuardRunner) Disable(opts *sysproxy.Options) error {
+	return sysproxy.DisableProxy(opts)
+}
+
 func (windowsSysproxyGuardRunner) Close() error {
 	return nil
 }
@@ -91,6 +95,12 @@ func windowsSysproxyGuardQueryOptions(opts *sysproxy.Options) *sysproxy.Options 
 func (r *windowsTokenSysproxyGuardRunner) Apply(mode sysproxyGuardMode, opts *sysproxy.Options) error {
 	return r.run(func() error {
 		return applySysproxyGuardSettings(mode, opts)
+	})
+}
+
+func (r *windowsTokenSysproxyGuardRunner) Disable(opts *sysproxy.Options) error {
+	return r.run(func() error {
+		return sysproxy.DisableProxy(opts)
 	})
 }
 

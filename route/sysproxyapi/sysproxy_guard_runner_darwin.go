@@ -23,6 +23,10 @@ func (darwinSysproxyGuardRunner) Apply(mode sysproxyGuardMode, opts *sysproxy.Op
 	return applySysproxyGuardSettings(mode, opts)
 }
 
+func (darwinSysproxyGuardRunner) Disable(opts *sysproxy.Options) error {
+	return sysproxy.DisableProxy(opts)
+}
+
 func (darwinSysproxyGuardRunner) WaitChange(ctx context.Context, opts *sysproxy.Options) error {
 	return sysproxy.WaitProxySettingsChange(ctx, opts)
 }

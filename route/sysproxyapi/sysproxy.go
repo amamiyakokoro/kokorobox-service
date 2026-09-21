@@ -32,6 +32,7 @@ func Router() http.Handler {
 	r.Post("/pac", pac)
 	r.Post("/proxy", proxy)
 	r.Post("/disable", disable)
+	r.Post("/renew", renew)
 	return r
 }
 
@@ -125,7 +126,15 @@ func pac(w http.ResponseWriter, r *http.Request) {
 	})
 	err := runSysproxyAsRequestUser(r, func() error {
 		return runSysproxyMutation(func() error {
+			runner, err := captureSysproxyGuardRunner(r)
+			if err != nil {
+				return err
+			}
 			if err := sysproxy.SetPac(opts); err != nil {
+				_ = runner.Close()
+				return err
+			}
+			if err := beginManagedProxy(runner, sysproxyGuardModePAC, opts); err != nil {
 				return err
 			}
 			StopGuard()
@@ -158,7 +167,15 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 	})
 	err := runSysproxyAsRequestUser(r, func() error {
 		return runSysproxyMutation(func() error {
+			runner, err := captureSysproxyGuardRunner(r)
+			if err != nil {
+				return err
+			}
 			if err := sysproxy.SetProxy(opts); err != nil {
+				_ = runner.Close()
+				return err
+			}
+			if err := beginManagedProxy(runner, sysproxyGuardModeProxy, opts); err != nil {
 				return err
 			}
 			StopGuard()
@@ -193,12 +210,26 @@ func disable(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			StopGuard()
+			clearSysproxyLease()
 			return nil
 		})
 	})
 	logSysproxyOperation("disable_proxy", "Proxy disabled", "Failed to disable proxy", t, err, sysproxyOptionLogFields(opts)...)
 	if err != nil {
 		httphelper.SendError(w, err)
+		return
+	}
+	render.NoContent(w, r)
+}
+
+func renew(w http.ResponseWriter, r *http.Request) {
+	var renewed bool
+	_ = runSysproxyMutation(func() error {
+		renewed = renewSysproxyLease()
+		return nil
+	})
+	if !renewed {
+		httphelper.SendError(w, httphelper.Conflict("No service-owned system proxy to renew"))
 		return
 	}
 	render.NoContent(w, r)
