@@ -1,11 +1,12 @@
 package coreapi
 
 import (
+	"net/http"
+	"sync"
+
 	corepkg "github.com/amamiyakokoro/kokorobox-service/core"
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
-	"net/http"
-	"sync/atomic"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -13,18 +14,24 @@ import (
 
 var (
 	cm     *corepkg.CoreManager
-	isInit atomic.Bool
+	initMu sync.Mutex
 )
 
-func Router() http.Handler {
-	if !isInit.Load() {
+func initCoreManager() {
+	initMu.Lock()
+	defer initMu.Unlock()
+	if cm == nil {
 		cm = corepkg.NewCoreManager(corepkg.WithTrafficMonitorPipeSDDL(trafficMonitorPipeSDDL()))
-		isInit.Store(true)
 	}
+}
+
+func Router() http.Handler {
+	initCoreManager()
 
 	r := chi.NewRouter()
 
 	r.Get("/", coreStatus)
+	r.Get("/desired", coreDesiredStatus)
 	r.Get("/events", coreEvents)
 	r.HandleFunc("/controller", coreControllerProxy)
 	r.HandleFunc("/controller/*", coreControllerProxy)
@@ -46,10 +53,15 @@ func trafficMonitorPipeSDDL() string {
 }
 
 func Stop() error {
-	if !isInit.Load() || cm == nil {
+	desiredCore.stopWatching()
+	if cm == nil {
 		return nil
 	}
 	return cm.StopCore()
+}
+
+func coreDesiredStatus(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, map[string]any{"desired_state": map[bool]string{true: "running", false: "stopped"}[desiredCore.desired()]})
 }
 
 func coreStatus(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +133,7 @@ func coreStart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := cm.StartCoreWithProfile(profile, coreLaunchOptions(r)...); err != nil {
+	if err := startDesiredCore(profile, coreLaunchGroup(r), coreLaunchOptions(r)...); err != nil {
 		httphelper.SendError(w, err)
 		return
 	}
@@ -130,6 +142,10 @@ func coreStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func coreStop(w http.ResponseWriter, r *http.Request) {
+	if err := desiredCore.set(false, nil); err != nil {
+		httphelper.SendError(w, err)
+		return
+	}
 	if err := cm.StopCore(); err != nil {
 		httphelper.SendError(w, err)
 		return
@@ -150,10 +166,17 @@ func coreRestart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := cm.RestartCoreWithProfile(profile, coreLaunchOptions(r)...); err != nil {
+	if err := desiredCore.set(true, coreLaunchGroup(r)); err != nil {
 		httphelper.SendError(w, err)
 		return
 	}
+	desiredCore.mu.Lock()
+	if err := cm.RestartCoreWithProfile(profile, coreLaunchOptions(r)...); err != nil {
+		desiredCore.mu.Unlock()
+		httphelper.SendError(w, err)
+		return
+	}
+	desiredCore.mu.Unlock()
 	sendCoreReady(w, r, "Core restarted successfully")
 }
 

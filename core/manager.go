@@ -672,32 +672,10 @@ func (cm *CoreManager) handleProcessExit() {
 		return
 	}
 
-	profile := LaunchProfile{}
-	access := fileAccess{}
-	if cm.launch != nil {
-		profile = cm.launch.profile
-		access = cm.launch.fileAccess
-	}
-	cm.emitCoreEvent(CoreEventRestarting, "核心异常退出，正在重启", nil)
 	cm.monitoring.Store(false)
 	cm.signalStopLocked()
 	cm.cleanupLocked()
 	cm.mutex.Unlock()
-
-	go func() {
-		for retries := range 3 {
-			if err := cm.StartCoreWithProfile(&profile, withFileAccess(access)); err != nil {
-				log.Printf("重启核心进程失败 (尝试 %d/3): %v", retries+1, err)
-				time.Sleep(time.Second * time.Duration(retries+1))
-				continue
-			}
-			log.Println("核心进程已成功重启")
-			return
-		}
-		err := fmt.Errorf("达到最大重试次数，重启失败")
-		cm.emitCoreEvent(CoreEventRestartFailed, "Failed to restart core", err)
-		log.Println(err)
-	}()
 }
 
 func (cm *CoreManager) takeoverRestartedProcess() bool {

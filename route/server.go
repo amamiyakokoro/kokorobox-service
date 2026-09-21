@@ -79,6 +79,9 @@ func Start(addr string) error {
 	if err := dnsapi.Configure(dataDir); err != nil {
 		log.Printf("Failed to recover service-owned DNS: %v", err)
 	}
+	if err := coreapi.ConfigureDesiredCore(dataDir); err != nil {
+		return fmt.Errorf("recover desired core state: %w", err)
+	}
 
 	if runtime.GOOS == "windows" {
 		err = startServer(addr, StartPipe)

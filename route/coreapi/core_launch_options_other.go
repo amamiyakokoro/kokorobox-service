@@ -10,3 +10,7 @@ import (
 func coreLaunchOptions(_ *http.Request) []corepkg.LaunchOption {
 	return nil
 }
+
+func coreLaunchGroup(_ *http.Request) *uint32 {
+	return nil
+}

@@ -113,10 +113,29 @@ func SaveLaunchProfile(profile LaunchProfile) error {
 		return fmt.Errorf("序列化核心启动配置失败：%w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".launch-profile-*")
+	if err != nil {
 		return fmt.Errorf("保存核心启动配置失败：%w", err)
 	}
-
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		return err
+	}
 	return nil
 }
 
