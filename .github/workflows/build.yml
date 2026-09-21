@@ -82,12 +82,37 @@ jobs:
         path: |
           kokorobox-service-${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}*
 
+  process-router:
+    needs: [test]
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build pinned Windows Process Router bundle
+      shell: pwsh
+      run: ./scripts/build-process-router.ps1 -OutputDir process-router
+
+    - name: Archive Process Router bundle
+      shell: pwsh
+      run: |
+        $archive = "kokorobox-service-windows-amd64-v3-process-router.zip"
+        Compress-Archive -Path process-router -DestinationPath $archive
+        $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+        "$hash  $archive" | Set-Content "$archive.sha256" -Encoding ascii
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: "windows-process-router"
+        path: |
+          kokorobox-service-windows-amd64-v3-process-router.zip*
+
   pre-release:
     if: >-
       github.event_name != 'pull_request' &&
       !startsWith(github.ref, 'refs/tags/v') &&
       !(github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
-    needs: [build]
+    needs: [build, process-router]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -122,7 +147,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.version, 'v'))
-    needs: [build]
+    needs: [build, process-router]
     runs-on: ubuntu-latest
     permissions:
       contents: write

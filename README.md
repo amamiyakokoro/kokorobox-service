@@ -107,7 +107,10 @@ Desktop builds pin an independent service release such as `v0.1.0`. Stable tags 
 must never be moved or replaced.
 
 Every release binary includes a `.sha256` file that KokoroBox Desktop verifies before packaging the
-service. Create stable releases with a `vMAJOR.MINOR.PATCH` tag:
+service. Windows x64 releases also include a checksum-protected Process Router archive produced
+from the pinned sources in this repository. The archive contains the `process-router/` directory
+that must remain next to the service executable before installation. Create stable releases with a
+`vMAJOR.MINOR.PATCH` tag:
 
 - Before `v1.0.0`, bump the minor version for incompatible CLI, API, authentication, or wire-format
   changes.
