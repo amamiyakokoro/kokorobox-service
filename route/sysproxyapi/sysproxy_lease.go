@@ -43,6 +43,7 @@ func captureSysproxyLease(mode sysproxyGuardMode, opts *sysproxy.Options, runner
 }
 
 func replaceSysproxyLease(lease *sysproxyLease) {
+	stopManagedProxyRecovery()
 	clearSysproxyLease()
 	sysproxyLeaseGeneration++
 	lease.generation = sysproxyLeaseGeneration
@@ -78,6 +79,13 @@ func clearSysproxyLease() {
 	}
 }
 
+func forgetSysproxyLease() {
+	clearSysproxyLease()
+	if err := removeManagedProxyRecord(); err != nil {
+		log.Printf("Failed to remove managed system proxy record: %v", err)
+	}
+}
+
 func expireSysproxyLease(generation uint64) {
 	err := runSysproxyMutation(func() error {
 		lease := activeSysproxyLease
@@ -93,7 +101,7 @@ func expireSysproxyLease(generation uint64) {
 			lease.timer = time.AfterFunc(sysproxyLeaseRetry, func() { expireSysproxyLease(generation) })
 			return err
 		}
-		clearSysproxyLease()
+		forgetSysproxyLease()
 		return nil
 	})
 	if err != nil {
@@ -127,20 +135,34 @@ func releaseSysproxyLease() error {
 // restart while Desktop is still running.
 func StopManagedProxy() error {
 	return runSysproxyMutation(func() error {
+		stopManagedProxyRecovery()
 		StopGuard()
+		if activeSysproxyLease == nil {
+			return nil
+		}
 		err := releaseSysproxyLease()
-		clearSysproxyLease()
+		if err == nil {
+			forgetSysproxyLease()
+		} else {
+			clearSysproxyLease()
+		}
 		return err
 	})
 }
 
 func beginManagedProxy(runner sysproxyGuardRunner, mode sysproxyGuardMode, opts *sysproxy.Options) error {
 	lease, err := captureSysproxyLease(mode, opts, runner)
+	if err == nil {
+		err = persistManagedProxy(lease)
+	}
 	if err != nil {
 		StopGuard()
 		clearSysproxyLease()
 		disableErr := runner.Disable(opts)
 		_ = runner.Close()
+		if disableErr == nil {
+			_ = removeManagedProxyRecord()
+		}
 		return errors.Join(err, disableErr)
 	}
 	replaceSysproxyLease(lease)

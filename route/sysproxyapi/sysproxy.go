@@ -210,7 +210,7 @@ func disable(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			StopGuard()
-			clearSysproxyLease()
+			forgetSysproxyLease()
 			return nil
 		})
 	})

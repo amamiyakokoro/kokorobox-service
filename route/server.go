@@ -72,6 +72,9 @@ func Start(addr string) error {
 	} else {
 		log.Println("警告：请求方身份绑定未启用")
 	}
+	if err := sysproxyapi.ConfigureManagedProxyRecovery(dataDir); err != nil {
+		log.Printf("Failed to recover service-owned system proxy: %v", err)
+	}
 
 	if runtime.GOOS == "windows" {
 		err = startServer(addr, StartPipe)
