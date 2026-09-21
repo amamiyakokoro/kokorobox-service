@@ -123,12 +123,12 @@ func pac(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	StopGuard()
 	err := runSysproxyAsRequestUser(r, func() error {
 		return runSysproxyMutation(func() error {
 			if err := sysproxy.SetPac(opts); err != nil {
 				return err
 			}
+			StopGuard()
 			configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModePAC, opts)
 			return nil
 		})
@@ -156,12 +156,12 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	StopGuard()
 	err := runSysproxyAsRequestUser(r, func() error {
 		return runSysproxyMutation(func() error {
 			if err := sysproxy.SetProxy(opts); err != nil {
 				return err
 			}
+			StopGuard()
 			configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModeProxy, opts)
 			return nil
 		})
@@ -187,10 +187,13 @@ func disable(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	StopGuard()
 	err := runSysproxyAsRequestUser(r, func() error {
 		return runSysproxyMutation(func() error {
-			return sysproxy.DisableProxy(opts)
+			if err := sysproxy.DisableProxy(opts); err != nil {
+				return err
+			}
+			StopGuard()
+			return nil
 		})
 	})
 	logSysproxyOperation("disable_proxy", "Proxy disabled", "Failed to disable proxy", t, err, sysproxyOptionLogFields(opts)...)
