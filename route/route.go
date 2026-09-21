@@ -4,6 +4,7 @@ import (
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
 	"github.com/amamiyakokoro/kokorobox-service/route/bootstrap"
 	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/dnsapi"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 	"github.com/amamiyakokoro/kokorobox-service/route/processrouterapi"
 	"github.com/amamiyakokoro/kokorobox-service/route/serviceapi"
@@ -35,6 +36,7 @@ func router(bootstrapSocketPath string) *chi.Mux {
 		})
 		r.Mount("/service", serviceapi.Router())
 		r.Mount("/sysproxy", sysproxyapi.Router())
+		r.Mount("/network/dns", dnsapi.Router())
 		r.Mount("/core", coreapi.Router())
 		r.Mount("/process-router", processrouterapi.Router())
 		r.Mount("/sys", sysapi.Router())

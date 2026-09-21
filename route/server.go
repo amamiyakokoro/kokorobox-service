@@ -8,6 +8,7 @@ import (
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
 	"github.com/amamiyakokoro/kokorobox-service/route/coreapi"
+	"github.com/amamiyakokoro/kokorobox-service/route/dnsapi"
 	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 	"github.com/amamiyakokoro/kokorobox-service/route/processrouterapi"
 	"github.com/amamiyakokoro/kokorobox-service/route/sysproxyapi"
@@ -75,6 +76,9 @@ func Start(addr string) error {
 	if err := sysproxyapi.ConfigureManagedProxyRecovery(dataDir); err != nil {
 		log.Printf("Failed to recover service-owned system proxy: %v", err)
 	}
+	if err := dnsapi.Configure(dataDir); err != nil {
+		log.Printf("Failed to recover service-owned DNS: %v", err)
+	}
 
 	if runtime.GOOS == "windows" {
 		err = startServer(addr, StartPipe)
@@ -91,6 +95,9 @@ func Stop() error {
 	var errs []error
 	if err := sysproxyapi.StopManagedProxy(); err != nil {
 		errs = append(errs, fmt.Errorf("清理系统代理失败：%w", err))
+	}
+	if err := dnsapi.Stop(); err != nil {
+		errs = append(errs, fmt.Errorf("清理 DNS 失败：%w", err))
 	}
 	if err := processrouterapi.Stop(); err != nil {
 		errs = append(errs, fmt.Errorf("停止应用分流失败：%w", err))
