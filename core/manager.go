@@ -19,13 +19,14 @@ import (
 )
 
 const (
-	startTimeout          = 30 * time.Second
-	fatalIndicator        = "level=fatal"
-	monitorInterval       = 1 * time.Second
-	takeoverGracePeriod   = 10 * time.Second
-	takeoverCheckInterval = 250 * time.Millisecond
-	startupBufferLimit    = 128 * 1024
-	startupLineLimit      = 16 * 1024
+	startTimeout            = 30 * time.Second
+	fatalIndicator          = "level=fatal"
+	monitorInterval         = 1 * time.Second
+	takeoverGracePeriod     = 10 * time.Second
+	takeoverCheckInterval   = 250 * time.Millisecond
+	startupReadyGracePeriod = 250 * time.Millisecond
+	startupBufferLimit      = 128 * 1024
+	startupLineLimit        = 16 * 1024
 )
 
 type coreLogEventRule struct {
@@ -856,7 +857,24 @@ func (cm *CoreManager) waitForStartup(launch *launchSession, errBuffer *boundedO
 			if err != nil {
 				return fmt.Errorf("等待核心 post-up 通知失败：%w", err)
 			}
-			return nil
+			graceTimer := time.NewTimer(startupReadyGracePeriod)
+			defer graceTimer.Stop()
+			select {
+			case err := <-startupFatal:
+				if err != nil {
+					return err
+				}
+				return nil
+			case err := <-processDone:
+				if err != nil {
+					return fmt.Errorf("核心进程启动后立即退出：%w，错误输出: %s", err, errBuffer.String())
+				}
+				return fmt.Errorf("核心进程启动后立即退出")
+			case <-graceTimer.C:
+				return nil
+			case <-ctx.Done():
+				return fmt.Errorf("启动核心进程超时")
+			}
 		case err := <-startupFatal:
 			if err != nil {
 				return err
@@ -901,6 +919,9 @@ func startupFatalLineError(line string) error {
 		return fmt.Errorf("控制器监听失败：%s", strings.TrimSpace(line))
 	case strings.Contains(line, "Start TUN listening error"):
 		return fmt.Errorf("虚拟网卡启动失败：%s", strings.TrimSpace(line))
+	case strings.Contains(lower, "start ") &&
+		(strings.Contains(lower, " server error") || strings.Contains(lower, " listening error")):
+		return fmt.Errorf("核心监听器启动失败：%s", strings.TrimSpace(line))
 	default:
 		return nil
 	}
