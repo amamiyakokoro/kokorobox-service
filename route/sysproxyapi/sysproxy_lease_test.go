@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 type leaseTestRunner struct {

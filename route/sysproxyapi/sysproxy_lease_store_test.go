@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 func TestRecoveredLeaseOnlyDisablesMatchingProxy(t *testing.T) {

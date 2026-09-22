@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 type linuxSysproxyGuardRunner struct {

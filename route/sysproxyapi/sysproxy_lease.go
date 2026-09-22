@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/amamiyakokoro/kokorobox-service/log"
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 // The Desktop renews this lease while it owns the proxy. A lost Desktop

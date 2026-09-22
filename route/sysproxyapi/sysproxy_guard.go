@@ -9,7 +9,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/log"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 type sysproxyGuardMode string

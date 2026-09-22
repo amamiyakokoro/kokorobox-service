@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 func recoverySysproxyOptions(opts *sysproxy.Options, runner sysproxyGuardRunner) (*sysproxy.Options, error) {

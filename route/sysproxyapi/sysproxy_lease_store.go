@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/amamiyakokoro/kokorobox-service/log"
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 const managedProxyRecordVersion = 1

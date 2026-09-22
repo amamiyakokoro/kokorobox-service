@@ -124,8 +124,8 @@ that must remain next to the service executable before installation. Create stab
 
 ## Related projects
 
-- [amamiyakokoro/sysproxy-go](https://github.com/amamiyakokoro/sysproxy-go) provides system proxy
-  integration.
+- [amamiyakokoro/sysproxy-go](https://github.com/amamiyakokoro/sysproxy-go) v2 provides the system
+  proxy platform library.
 
 ## License
 

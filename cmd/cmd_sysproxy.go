@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/amamiyakokoro/kokorobox-service/i18n"
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 	"github.com/spf13/cobra"
 )
 

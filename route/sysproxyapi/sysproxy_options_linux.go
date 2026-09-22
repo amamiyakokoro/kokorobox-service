@@ -7,7 +7,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 func prepareSysproxyOptions(r *http.Request, opt *sysproxy.Options) *sysproxy.Options {

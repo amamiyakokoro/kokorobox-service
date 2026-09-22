@@ -5,7 +5,7 @@ package sysproxyapi
 import (
 	"fmt"
 
-	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
 
 func querySysproxyGuardSettings(opts *sysproxy.Options) (*sysproxy.ProxyConfig, error) {
