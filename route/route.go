@@ -31,6 +31,7 @@ func router(bootstrapSocketPath string) *chi.Mux {
 
 	r.Group(func(r chi.Router) {
 		r.Use(auth.AuthMiddleware)
+		r.Get("/meta", metaStatus)
 		r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 			httphelper.SendJSON(w, "success", "auth success")
 		})

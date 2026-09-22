@@ -72,7 +72,12 @@ jobs:
         else
           artifact=kokorobox-service-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
-        go build -trimpath -ldflags "-extldflags --static -w -s -buildid=" -o "$artifact"
+        if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" == v* ]]; then
+          service_version="${GITHUB_REF_NAME#v}"
+        else
+          service_version="dev+${GITHUB_SHA::7}"
+        fi
+        go build -trimpath -ldflags "-extldflags --static -w -s -buildid= -X github.com/amamiyakokoro/kokorobox-service/route.ServiceVersion=$service_version" -o "$artifact"
         sha256sum "$artifact" > "$artifact.sha256"
 
     - name: Archive production artifacts
