@@ -9,7 +9,7 @@ import (
 	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/amamiyakokoro/kokorobox-service/route/httphelper"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )

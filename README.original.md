@@ -306,7 +306,7 @@ Service 每三秒检查一次专用 SOCKS listener。Mihomo 不可用时，所�
 | kardianos/service          | 系统服务管理     |
 | shirou/gopsutil            | 进程信息获取     |
 | spf13/cobra                | CLI 框架         |
-| UruhaLushia/sysproxy-go    | 系统代理设置     |
+| amamiyakokoro/sysproxy-go  | 系统代理设置     |
 | go.uber.org/zap            | 结构化日志       |
 
 ## 许可证

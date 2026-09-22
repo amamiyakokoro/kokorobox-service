@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 	"github.com/amamiyakokoro/kokorobox-service/i18n"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 	"github.com/spf13/cobra"
 )
 

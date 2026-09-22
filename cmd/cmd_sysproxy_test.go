@@ -1,8 +1,15 @@
 package cmd
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func TestSysproxyCommandsReportFailures(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("unsupported XDG desktop failure injection is Linux-specific")
+	}
+
 	tests := []struct {
 		name string
 		run  func() error

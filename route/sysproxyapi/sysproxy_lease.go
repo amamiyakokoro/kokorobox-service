@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 	"github.com/amamiyakokoro/kokorobox-service/log"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 )
 
 // The Desktop renews this lease while it owns the proxy. A lost Desktop

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
 	"github.com/amamiyakokoro/kokorobox-service/route/auth"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 )
 
 func recoverySysproxyOptions(opts *sysproxy.Options, runner sysproxyGuardRunner) (*sysproxy.Options, error) {

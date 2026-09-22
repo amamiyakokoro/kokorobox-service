@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 	"golang.org/x/sys/windows"
 )
 

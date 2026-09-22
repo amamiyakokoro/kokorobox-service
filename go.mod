@@ -3,7 +3,7 @@ module github.com/amamiyakokoro/kokorobox-service
 go 1.26.0
 
 require (
-	github.com/UruhaLushia/sysproxy-go v1.0.2-0.20260906030449-7f540b47a253
+	github.com/amamiyakokoro/sysproxy-go v1.1.0
 	github.com/ebitengine/purego v0.11.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/render v1.0.3
@@ -26,5 +26,3 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 )
-
-replace github.com/UruhaLushia/sysproxy-go => github.com/amamiyakokoro/sysproxy-go v1.0.4

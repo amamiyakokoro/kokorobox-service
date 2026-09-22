@@ -4,7 +4,7 @@ package sysproxyapi
 
 import (
 	"fmt"
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 )
 
 func recoverySysproxyOptions(_ *sysproxy.Options, _ sysproxyGuardRunner) (*sysproxy.Options, error) {

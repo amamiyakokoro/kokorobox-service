@@ -7,7 +7,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 
-	"github.com/UruhaLushia/sysproxy-go/sysproxy"
+	"github.com/amamiyakokoro/sysproxy-go/sysproxy"
 )
 
 func runSysproxyAsRequestUser(r *http.Request, fn func() error) error {
