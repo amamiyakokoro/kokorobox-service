@@ -66,6 +66,11 @@ The `service init --ensure-running` recovery flow initializes authentication and
 required start or restart within the same privileged process. This avoids a second administrator
 authorization request during first-time setup.
 
+### System proxy status
+
+`kokorobox-service sysproxy status` can inspect the current proxy settings. Proxy changes go
+through the authenticated local API so the service can manage its lease and cleanup.
+
 ## Platform security details
 
 ### macOS bootstrap

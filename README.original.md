@@ -1,5 +1,8 @@
 # sparkle-service
 
+> Archived upstream documentation. Commands below describe the original sparkle-service and
+> do not represent the current KokoroBox Service CLI; see [README.md](README.md).
+
 sparkle-service 是 [Sparkle](https://github.com/xishang0128/sparkle) 的后台系统服务组件，使用 Go 编写。它以系统服务的形式运行，通过 Unix Socket（Linux/macOS）或命名管道（Windows）对外提供 HTTP API，负责管理代理核心进程的生命周期、系统代理设置和 DNS 配置等。
 
 ## 功能特性

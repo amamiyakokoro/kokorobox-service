@@ -10,10 +10,6 @@ import (
 )
 
 var (
-	server string
-	bypass string
-	pacUrl string
-
 	device           string
 	onlyActiveDevice bool
 	useRegistry      bool
@@ -68,9 +64,6 @@ func init() {
 	processRouterFirewallCmd.AddCommand(processRouterFirewallCheckCmd)
 	processRouterFirewallCmd.AddCommand(processRouterFirewallRemoveCmd)
 
-	sysproxyCmd.AddCommand(proxyCmd)
-	sysproxyCmd.AddCommand(pacCmd)
-	sysproxyCmd.AddCommand(disableCmd)
 	sysproxyCmd.AddCommand(statusCmd)
 
 	MainCmd.PersistentFlags().BoolVarP(&onlyActiveDevice, "only-active-device", "a", false, i18n.DefaultText("Apply only to active network devices"))
@@ -81,9 +74,4 @@ func init() {
 	MainCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		i18n.SetDefault(locale)
 	}
-
-	proxyCmd.Flags().StringVarP(&server, "server", "s", "", i18n.DefaultText("Proxy server address"))
-	proxyCmd.Flags().StringVarP(&bypass, "bypass", "b", "", i18n.DefaultText("Bypass addresses"))
-
-	pacCmd.Flags().StringVarP(&pacUrl, "url", "u", "", i18n.DefaultText("PAC URL"))
 }

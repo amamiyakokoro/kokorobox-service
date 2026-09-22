@@ -138,6 +138,7 @@ var simplifiedSourceTerms = map[string]string{
 	"管理 KokoroBox 服务":          "Manage KokoroBox Service",
 	"初始化服务（传入公钥）":              "Initialize the service with a public key",
 	"管理系统代理设置":                 "Manage system proxy settings",
+	"查看系统代理设置":                 "Inspect system proxy settings",
 	"设置系统代理":                   "Set system proxy",
 	"设置 PAC 代理":                "Set PAC proxy",
 	"取消代理设置":                   "Disable proxy settings",
