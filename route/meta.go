@@ -19,6 +19,7 @@ type serviceCapabilities struct {
 	SysproxyNetworkReconcile bool `json:"sysproxyNetworkReconcile"`
 	DNSLease                 bool `json:"dnsLease"`
 	ProcessRouter            bool `json:"processRouter"`
+	WindowsUwpLoopback       bool `json:"windowsUwpLoopback"`
 }
 
 type serviceMeta struct {
@@ -38,6 +39,7 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 			SysproxyNetworkReconcile: runtime.GOOS == "darwin",
 			DNSLease:                 runtime.GOOS == "darwin",
 			ProcessRouter:            runtime.GOOS == "windows" || runtime.GOOS == "linux",
+			WindowsUwpLoopback:       runtime.GOOS == "windows",
 		},
 	})
 }

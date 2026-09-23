@@ -18,6 +18,7 @@ func Router() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/dns/set", setDns)
+	r.Put("/uwp-loopback", setUwpLoopback)
 
 	return r
 }
