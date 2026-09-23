@@ -45,6 +45,41 @@ func ActiveDNSService() (DNSService, error) {
 	return DNSService{}, fmt.Errorf("no active network service")
 }
 
+// ActiveNetworkSignature identifies a macOS network transition without
+// treating an unrelated proxy preference edit as a target change. It stays
+// internal to the Service and must not be written to logs or lease records.
+func ActiveNetworkSignature() (string, error) {
+	service, err := ActiveDNSService()
+	if err != nil {
+		return "", err
+	}
+	global := ""
+	for _, key := range []string{"State:/Network/Global/IPv4", "State:/Network/Global/IPv6"} {
+		state, err := scutilShow(key)
+		if err != nil {
+			return "", err
+		}
+		if scutilValue(state, "PrimaryService") == service.ID {
+			global = state
+			break
+		}
+	}
+	if global == "" {
+		return "", fmt.Errorf("active network service has no global state")
+	}
+	iface := scutilValue(global, "PrimaryInterface")
+	parts := []string{service.ID, iface, scutilValue(global, "Router")}
+	if iface != "" && !strings.HasPrefix(iface, "-") && !strings.ContainsAny(iface, "\x00\r\n/") {
+		if state, err := scutilShow("State:/Network/Interface/" + iface + "/IPv4"); err == nil {
+			parts = append(parts, state)
+		}
+		if network, err := exec.Command("networksetup", "-getairportnetwork", iface).Output(); err == nil {
+			parts = append(parts, strings.TrimSpace(string(network)))
+		}
+	}
+	return strings.Join(parts, "\x00"), nil
+}
+
 func scutilShow(key string) (string, error) {
 	cmd := exec.Command("scutil")
 	cmd.Stdin = strings.NewReader("show " + key + "\nquit\n")

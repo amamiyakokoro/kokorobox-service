@@ -3,6 +3,7 @@ package sysproxyapi
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/amamiyakokoro/kokorobox-service/log"
@@ -14,15 +15,18 @@ import (
 // could not reach the service.
 const sysproxyLeaseDuration = 60 * time.Second
 const sysproxyLeaseRetry = 15 * time.Second
+const sysproxyReconcileInterval = 5 * time.Second
 
 type sysproxyLease struct {
-	mode       sysproxyGuardMode
-	opts       *sysproxy.Options
-	expected   sysproxyGuardSnapshot
-	runner     sysproxyGuardRunner
-	deadline   time.Time
-	generation uint64
-	timer      *time.Timer
+	mode             sysproxyGuardMode
+	opts             *sysproxy.Options
+	expected         sysproxyGuardSnapshot
+	runner           sysproxyGuardRunner
+	deadline         time.Time
+	generation       uint64
+	timer            *time.Timer
+	reconcileTimer   *time.Timer
+	networkSignature string
 }
 
 // All accesses are serialized by sysproxyMutationMu.
@@ -49,6 +53,9 @@ func replaceSysproxyLease(lease *sysproxyLease) {
 	lease.generation = sysproxyLeaseGeneration
 	activeSysproxyLease = lease
 	renewSysproxyLease()
+	if runtime.GOOS == "darwin" {
+		scheduleSysproxyReconcile(lease)
+	}
 }
 
 func renewSysproxyLease() bool {
@@ -73,6 +80,9 @@ func clearSysproxyLease() {
 	}
 	if lease.timer != nil {
 		lease.timer.Stop()
+	}
+	if lease.reconcileTimer != nil {
+		lease.reconcileTimer.Stop()
 	}
 	if err := lease.runner.Close(); err != nil {
 		log.Printf("Failed to close system proxy owner: %v", err)
