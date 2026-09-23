@@ -24,7 +24,8 @@ func TestMetaReportsAvailablePlatformCapabilities(t *testing.T) {
 	if !meta.Capabilities.CoreDesiredState || !meta.Capabilities.SysproxyLease || !meta.Capabilities.SysproxyEvents {
 		t.Fatalf("missing service capabilities: %+v", meta.Capabilities)
 	}
-	if meta.Capabilities.DNSLease != (runtime.GOOS == "darwin") ||
+	if meta.Capabilities.SysproxyNetworkReconcile != (runtime.GOOS == "darwin") ||
+		meta.Capabilities.DNSLease != (runtime.GOOS == "darwin") ||
 		meta.Capabilities.ProcessRouter != (runtime.GOOS == "windows" || runtime.GOOS == "linux") {
 		t.Fatalf("incorrect platform capabilities: %+v", meta.Capabilities)
 	}

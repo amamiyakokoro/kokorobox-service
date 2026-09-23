@@ -13,11 +13,12 @@ var ServiceVersion = "dev"
 const ServiceAPIVersion = 1
 
 type serviceCapabilities struct {
-	CoreDesiredState bool `json:"coreDesiredState"`
-	SysproxyLease    bool `json:"sysproxyLease"`
-	SysproxyEvents   bool `json:"sysproxyEvents"`
-	DNSLease         bool `json:"dnsLease"`
-	ProcessRouter    bool `json:"processRouter"`
+	CoreDesiredState         bool `json:"coreDesiredState"`
+	SysproxyLease            bool `json:"sysproxyLease"`
+	SysproxyEvents           bool `json:"sysproxyEvents"`
+	SysproxyNetworkReconcile bool `json:"sysproxyNetworkReconcile"`
+	DNSLease                 bool `json:"dnsLease"`
+	ProcessRouter            bool `json:"processRouter"`
 }
 
 type serviceMeta struct {
@@ -31,11 +32,12 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 		ServiceVersion: ServiceVersion,
 		APIVersion:     ServiceAPIVersion,
 		Capabilities: serviceCapabilities{
-			CoreDesiredState: true,
-			SysproxyLease:    true,
-			SysproxyEvents:   true,
-			DNSLease:         runtime.GOOS == "darwin",
-			ProcessRouter:    runtime.GOOS == "windows" || runtime.GOOS == "linux",
+			CoreDesiredState:         true,
+			SysproxyLease:            true,
+			SysproxyEvents:           true,
+			SysproxyNetworkReconcile: runtime.GOOS == "darwin",
+			DNSLease:                 runtime.GOOS == "darwin",
+			ProcessRouter:            runtime.GOOS == "windows" || runtime.GOOS == "linux",
 		},
 	})
 }
