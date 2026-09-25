@@ -9,12 +9,10 @@ on:
     paths-ignore:
       - "docs/**"
       - "README.md"
-      - ".github/ISSUE_TEMPLATE/**"
   push:
     paths-ignore:
       - "docs/**"
       - "README.md"
-      - ".github/ISSUE_TEMPLATE/**"
     branches:
       - main
     tags:

@@ -21,8 +21,6 @@ vendor
 # macOS file
 .DS_Store
 
-# test suite
-test/config/cache*
 .vscode/
 .fleet/
 
