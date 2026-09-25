@@ -28,4 +28,6 @@ kokorobox-service service uninstall
 
 On macOS, Desktop registers the daemon through `SMAppService`. Run `kokorobox-service --help` for other commands and options.
 
+See [Local API](docs/API.md) for endpoints, request bodies, and authentication.
+
 Originally based on [sparkle-service](https://github.com/UruhaLushia/sparkle-service). Licensed under [GPL-3.0](LICENSE).
