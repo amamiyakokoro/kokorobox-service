@@ -87,3 +87,53 @@ func TestEnsureRejectsInvalidExecutableBeforeTouchingFirewall(t *testing.T) {
 		t.Fatalf("accepted directory: %v", err)
 	}
 }
+
+// Explicitly opt in from an elevated process. Exercise the real Rules.Add COM
+// boundary: property setters alone accept an empty ServiceName, but Add rejects it.
+// Unique, disabled rules never admit traffic and are removed even on failure.
+func TestPolicyAddsRealWindowsRules(t *testing.T) {
+	if os.Getenv("KOKOROBOX_TEST_FIREWALL_INTEGRATION") != "1" {
+		t.Skip("requires elevation and KOKOROBOX_TEST_FIREWALL_INTEGRATION=1")
+	}
+	dir := t.TempDir()
+	policyPath := filepath.Join(dir, "policy.ps1")
+	if err := os.WriteFile(policyPath, []byte(policyScript), 0600); err != nil {
+		t.Fatal(err)
+	}
+	harness := `
+$ErrorActionPreference = 'Stop'
+$prefix = 'KokoroBox Firewall Test ' + [guid]::NewGuid().ToString()
+$body = [IO.File]::ReadAllText($env:KOKOROBOX_TEST_POLICY)
+# Only change test rule identity and enabled state; retain production COM setup.
+$body = $body.Replace('KokoroBox Service Core', $prefix).
+  Replace('$rule.Enabled = $true', '$rule.Enabled = $false').
+  Replace('-not $actual.Enabled', '$actual.Enabled')
+$run = [scriptblock]::Create($body)
+$store = New-Object -ComObject HNetCfg.FwPolicy2
+try {
+  $env:KOKOROBOX_CORE_FIREWALL_PATH = Join-Path $PSHOME 'powershell.exe'
+  & $run
+  & $run
+  # Exercise an actual executable-path update as on a core upgrade.
+  $env:KOKOROBOX_CORE_FIREWALL_PATH = Join-Path $env:SystemRoot 'System32\cmd.exe'
+  & $run
+  $rules = @($store.Rules | Where-Object { $_.Grouping -eq $prefix })
+  if ($rules.Count -ne 2) { throw 'Expected exactly two real firewall rules' }
+  foreach ($rule in $rules) {
+    if ($rule.Enabled -or $rule.ApplicationName -ine $env:KOKOROBOX_CORE_FIREWALL_PATH -or
+        -not [string]::IsNullOrEmpty($rule.ServiceName)) { throw 'Incorrect real firewall rule' }
+  }
+} finally {
+  foreach ($suffix in @(' TCP', ' UDP')) { $store.Rules.Remove($prefix + $suffix) }
+}
+`
+	testPath := filepath.Join(dir, "test.ps1")
+	if err := os.WriteFile(testPath, []byte(harness), 0600); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", testPath)
+	command.Env = append(os.Environ(), "KOKOROBOX_TEST_POLICY="+policyPath)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("real Windows policy failed: %v\n%s", err, output)
+	}
+}

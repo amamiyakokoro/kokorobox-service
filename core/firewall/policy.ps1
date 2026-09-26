@@ -27,7 +27,8 @@ foreach ($spec in @(
   $rule.Grouping = $group
   $rule.Description = 'Inbound proxy connections to the service-managed KokoroBox core. Mihomo controls LAN access.'
   $rule.ApplicationName = $program
-  $rule.ServiceName = ''
+  # Leave ServiceName unset: assigning even an empty string makes Rules.Add
+  # reject the COM rule with E_INVALIDARG. The staged executable owns traffic.
   $rule.Protocol = $spec.Protocol
   $rule.LocalPorts = '*'
   $rule.RemotePorts = '*'
@@ -43,7 +44,8 @@ foreach ($spec in @(
   $actual = @($policy.Rules | Where-Object { $_.Name -eq $spec.Name })[0]
   if ($actual.ApplicationName -ine $program -or -not $actual.Enabled -or
       $actual.Direction -ne 1 -or $actual.Action -ne 1 -or
-      $actual.Protocol -ne $spec.Protocol -or $actual.Profiles -ne 2147483647) {
+      $actual.Protocol -ne $spec.Protocol -or $actual.Profiles -ne 2147483647 -or
+      -not [string]::IsNullOrEmpty($actual.ServiceName)) {
     throw "Failed to verify core firewall rule '$($spec.Name)'"
   }
 }
