@@ -86,6 +86,12 @@ func (m *Manager) Restore() error {
 	m.restoreOnce.Do(func() {
 		m.mu.Lock()
 		defer m.mu.Unlock()
+		// Restoration can fail while a later manual activation succeeds. Keep
+		// monitoring independent of restoration so proxy probes and lease
+		// expiry still reconcile that activation.
+		ctx, cancel := context.WithCancel(context.Background())
+		m.monitorCancel = cancel
+		go m.monitor(ctx)
 		if err := os.MkdirAll(m.configDir, 0o700); err != nil {
 			restoreErr = err
 			return
@@ -98,9 +104,6 @@ func (m *Manager) Restore() error {
 			restoreErr = err
 			return
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		m.monitorCancel = cancel
-		go m.monitor(ctx)
 	})
 	if restoreErr != nil {
 		return restoreErr
