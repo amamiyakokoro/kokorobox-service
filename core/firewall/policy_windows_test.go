@@ -27,9 +27,9 @@ function New-Object {
   return Microsoft.PowerShell.Utility\New-Object -ComObject HNetCfg.FWRule
 }
 function Assert-Rule($rule, $path) {
- if ($rule.ApplicationName -cne $path -or -not $rule.Enabled -or $rule.Action -ne 1 -or
+ if ($rule.ApplicationName -ine $path -or -not $rule.Enabled -or $rule.Action -ne 1 -or
      $rule.Direction -ne 1 -or $rule.Profiles -ne 2147483647 -or $rule.EdgeTraversal -or
-     $rule.Grouping -ne 'KokoroBox Service Core') { throw 'Incorrect rule' }
+     $rule.Grouping -ne 'KokoroBox Service Core') { throw ("Incorrect rule for '$path': " + ($rule | Select-Object ApplicationName,Enabled,Action,Direction,Profiles,EdgeTraversal,Grouping | ConvertTo-Json -Compress)) }
 }
 $policyBody = [IO.File]::ReadAllText($env:KOKOROBOX_TEST_POLICY)
 $run = [scriptblock]::Create($policyBody)
