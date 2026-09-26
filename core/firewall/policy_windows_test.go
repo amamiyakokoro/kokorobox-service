@@ -33,7 +33,7 @@ function Assert-Rule($rule, $path) {
 }
 $policyBody = [IO.File]::ReadAllText($env:KOKOROBOX_TEST_POLICY)
 $run = [scriptblock]::Create($policyBody)
-$env:KOKOROBOX_CORE_FIREWALL_PATH = "C:ProgramDataKokoroBoxcore-runtimeoldhashmihomo.exe"
+$env:KOKOROBOX_CORE_FIREWALL_PATH = [IO.Path]::GetFullPath("C:/ProgramData/KokoroBox/core-runtime/oldhash/mihomo.exe")
 & $run
 if ($global:testPolicy.Rules.Count -ne 2) { throw 'Missing protocol rules' }
 foreach ($rule in $global:testPolicy.Rules) { Assert-Rule $rule $env:KOKOROBOX_CORE_FIREWALL_PATH }
@@ -41,8 +41,7 @@ if ($global:testPolicy.Rules[0].Protocol -ne 6 -or $global:testPolicy.Rules[1].P
 & $run
 if ($global:testPolicy.Rules.Count -ne 2) { throw 'Duplicate rules on restart' }
 # A staged hash update must repair both protocols without accumulating rules.
-$env:KOKOROBOX_CORE_FIREWALL_PATH = "C:ProgramDataKokoroBoxcore-runtime
-ew hash's foldermihomo.exe"
+$env:KOKOROBOX_CORE_FIREWALL_PATH = [IO.Path]::GetFullPath("C:/ProgramData/KokoroBox/core-runtime/new hash's folder/mihomo.exe")
 $global:testPolicy.Rules[0].Enabled = $false
 $global:testPolicy.Rules[0].Action = 0
 & $run
