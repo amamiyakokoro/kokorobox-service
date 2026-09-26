@@ -41,6 +41,7 @@ func Router() http.Handler {
 	r.Post("/start", coreStart)
 	r.Post("/stop", coreStop)
 	r.Post("/restart", coreRestart)
+	r.Post("/firewall/repair", coreFirewallRepair)
 
 	return r
 }
@@ -204,4 +205,12 @@ func sendCoreReady(w http.ResponseWriter, r *http.Request, message string) {
 		"message": message,
 		"core":    status,
 	})
+}
+
+func coreFirewallRepair(w http.ResponseWriter, r *http.Request) {
+	if err := cm.RepairCoreFirewall(); err != nil {
+		httphelper.SendError(w, err)
+		return
+	}
+	httphelper.SendJSON(w, "success", "Core firewall rules repaired")
 }

@@ -50,6 +50,7 @@ type processController interface {
 }
 
 type CoreManager struct {
+	ensureFirewall         func(string) error
 	cmd                    *exec.Cmd
 	controller             processController
 	launch                 *launchSession
@@ -361,6 +362,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		access:   launch.fileAccess,
 	})
 	launch.logWriter = logWriter
+	cm.configureLaunchFirewall(launch)
 
 	controller := newProcessController()
 	command, err := newCoreLauncher(launch).Command(launch)
