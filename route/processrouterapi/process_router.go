@@ -28,6 +28,8 @@ func Router() http.Handler {
 	r.Post("/stop", stop)
 	r.Put("/rules", replaceRules)
 	r.Get("/status", status)
+	r.Get("/logs", diagnosticLogs)
+	r.Delete("/logs", clearDiagnosticLogs)
 	r.Post("/firewall/repair", repairFirewall)
 	r.Post("/cleanup", cleanup)
 	return r
@@ -71,6 +73,15 @@ func replaceRules(w http.ResponseWriter, r *http.Request) {
 func status(w http.ResponseWriter, r *http.Request) {
 	manager.RenewLease()
 	render.JSON(w, r, manager.Status())
+}
+
+func diagnosticLogs(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, map[string]any{"entries": processrouter.DiagnosticLogs()})
+}
+
+func clearDiagnosticLogs(w http.ResponseWriter, r *http.Request) {
+	processrouter.ClearDiagnosticLogs()
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func repairFirewall(w http.ResponseWriter, r *http.Request) {

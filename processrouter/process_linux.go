@@ -35,18 +35,19 @@ type linuxCgroupController struct {
 }
 
 type linuxNativeProcess struct {
-	mu              sync.Mutex
-	controller      *linuxCgroupController
-	events          chan routerEvent
-	done            chan struct{}
-	cancel          context.CancelFunc
-	alive           bool
-	firewallReady   bool
-	proxyUDPDNS     bool
-	proxyPort       int
-	targets         []linuxProcessTarget
-	assigned        map[int]string
-	originalCgroups map[int]string
+	mu                sync.Mutex
+	controller        *linuxCgroupController
+	events            chan routerEvent
+	done              chan struct{}
+	cancel            context.CancelFunc
+	alive             bool
+	firewallReady     bool
+	proxyUDPDNS       bool
+	diagnosticLogging bool
+	proxyPort         int
+	targets           []linuxProcessTarget
+	assigned          map[int]string
+	originalCgroups   map[int]string
 }
 
 type linuxProcessSnapshot struct {
@@ -169,8 +170,10 @@ func (p *linuxNativeProcess) Send(payload []byte) error {
 		})
 	}
 	p.targets = targets
+	p.diagnosticLogging = command.DiagnosticLogging
 	if err := p.scanProcessesLocked(); err != nil {
 		if command.DiagnosticLogging {
+			recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
 			log.Printf("Linux 应用分流首次进程扫描失败: %v", err)
 		}
 	}
@@ -238,12 +241,14 @@ func (p *linuxNativeProcess) monitorProcesses(ctx context.Context) {
 		case <-ticker.C:
 			snapshot, err := snapshotLinuxProcesses()
 			if err != nil {
+				recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
 				log.Printf("Linux 应用分流进程扫描失败: %v", err)
 				continue
 			}
 			p.mu.Lock()
 			if p.alive {
 				if err := p.applyProcessSnapshotLocked(snapshot); err != nil {
+					recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
 					log.Printf("Linux 应用分流进程扫描失败: %v", err)
 				}
 			}
@@ -292,6 +297,9 @@ func (p *linuxNativeProcess) applyProcessSnapshotLocked(snapshot []linuxProcessS
 			continue
 		}
 		p.assigned[pid] = group
+		if p.diagnosticLogging {
+			recordDiagnostic(fmt.Sprintf("process=%s pid=%d result=%s", process.executablePath, pid, group))
+		}
 	}
 	for pid := range p.assigned {
 		if !seen[pid] && !processExists(pid) {

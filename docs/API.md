@@ -85,6 +85,8 @@ Supported on Windows x64 and Linux x64/arm64.
 | `PUT` | `/process-router/rules` | Validate and replace rules; returns router status. |
 | `POST` | `/process-router/start` | Start routing; returns router status. |
 | `GET` | `/process-router/status` | Read status and renew the client lease. |
+| `GET` | `/process-router/logs` | Read up to 1,000 recent routing diagnostic entries. |
+| `DELETE` | `/process-router/logs` | Clear routing diagnostic entries; returns `204`. |
 | `POST` | `/process-router/stop` | Stop routing but retain rules; returns `204`. |
 | `POST` | `/process-router/firewall/repair` | Verify and repair firewall state; returns router status. |
 | `POST` | `/process-router/cleanup` | Stop routing and remove saved rules; returns `204`. |
