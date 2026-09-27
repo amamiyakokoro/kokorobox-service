@@ -18,6 +18,7 @@ func Router() http.Handler {
 
 	r.Post("/stop", serviceStop)
 	r.Post("/restart", serviceRestart)
+	r.Get("/logs", serviceLogs)
 
 	return r
 }

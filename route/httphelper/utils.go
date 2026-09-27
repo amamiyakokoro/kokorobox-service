@@ -103,6 +103,11 @@ func RequestLogger(next http.Handler) http.Handler {
 		if status == 0 {
 			status = http.StatusOK
 		}
+		// Successful polling must not produce the next entry in its own log.
+		// Authentication and read failures still belong in the audit trail.
+		if !shouldLogResponse(r, status) {
+			return
+		}
 		fields := []any{
 			"method", r.Method,
 			"path", r.URL.Path,
@@ -124,6 +129,10 @@ func RequestLogger(next http.Handler) http.Handler {
 			log.S().Infow("HTTP request completed", fields...)
 		}
 	})
+}
+
+func shouldLogResponse(r *http.Request, status int) bool {
+	return r.Method != http.MethodGet || r.URL.Path != "/service/logs" || status >= http.StatusBadRequest
 }
 
 func shouldLogRequest(r *http.Request) bool {

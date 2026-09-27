@@ -20,6 +20,7 @@ type serviceCapabilities struct {
 	DNSLease                 bool `json:"dnsLease"`
 	ProcessRouter            bool `json:"processRouter"`
 	WindowsUwpLoopback       bool `json:"windowsUwpLoopback"`
+	ServiceLogs              bool `json:"serviceLogs"`
 }
 
 type serviceMeta struct {
@@ -40,6 +41,7 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 			DNSLease:                 runtime.GOOS == "darwin",
 			ProcessRouter:            runtime.GOOS == "windows" || runtime.GOOS == "linux",
 			WindowsUwpLoopback:       runtime.GOOS == "windows",
+			ServiceLogs:              true,
 		},
 	})
 }
