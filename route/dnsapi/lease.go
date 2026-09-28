@@ -164,7 +164,7 @@ func (m *manager) expire() {
 		return
 	}
 	if err := m.release(); err != nil {
-		log.Printf("Failed to release expired DNS lease: %v", err)
+		log.Errorf("Failed to release expired DNS lease: %v", err)
 		m.timer = time.AfterFunc(retryInterval, m.expire)
 	}
 }
@@ -178,7 +178,7 @@ func (m *manager) watchNetwork(ticker *time.Ticker, stop <-chan struct{}) {
 			m.mu.Lock()
 			if m.lease != nil {
 				if err := m.reconcile(); err != nil {
-					log.Printf("Failed to reconcile DNS lease: %v", err)
+					log.Errorf("Failed to reconcile DNS lease: %v", err)
 				}
 			}
 			m.mu.Unlock()
@@ -235,7 +235,7 @@ func (m *manager) reconcile() error {
 		}
 		if err := m.restore(item); err != nil {
 			remaining = append(remaining, item)
-			log.Printf("Failed to restore DNS for %s: %v", item.Service.Name, err)
+			log.Errorf("Failed to restore DNS for %s: %v", item.Service.Name, err)
 		} else {
 			changed = true
 		}

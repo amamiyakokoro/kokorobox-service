@@ -5,7 +5,6 @@ package sandbox
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +13,8 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 const sandboxRootPrefix = "kokorobox-core-sandbox-"
@@ -636,6 +637,6 @@ func normalizeSandboxPath(path string) (string, error) {
 
 func logSandboxCleanupError(err error) {
 	if err != nil {
-		log.Printf("Failed to clean up core sandbox: %v", err)
+		log.Errorf("Failed to clean up core sandbox: %v", err)
 	}
 }

@@ -33,7 +33,7 @@ func reconcileSysproxyLease(generation uint64) {
 		return lease.reconcileNetwork(signature)
 	})
 	if err != nil {
-		log.Printf("Failed to reconcile system proxy network target: %v", err)
+		log.Errorf("Failed to reconcile system proxy network target: %v", err)
 	}
 }
 

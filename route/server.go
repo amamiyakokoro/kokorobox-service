@@ -59,25 +59,25 @@ func Start(addr string) error {
 	keyDir := filepath.Join(dataDir, "keys")
 
 	if err := auth.InitKeyManager(keyDir); err != nil {
-		log.Printf("Warning: failed to initialize key manager: %v", err)
+		log.Warnf("Warning: failed to initialize key manager: %v", err)
 	}
 
 	km := auth.GetKeyManager()
 	if km.IsInitialized() {
 		log.Println("Key manager is initialized")
 	} else {
-		log.Println("Warning: key manager is not initialized")
+		log.Warnf("Warning: key manager is not initialized")
 	}
 	if km.HasAuthorizedPrincipal() {
 		log.Println("Requestor identity binding is enabled")
 	} else {
-		log.Println("Warning: requestor identity binding is not enabled")
+		log.Warnf("Warning: requestor identity binding is not enabled")
 	}
 	if err := sysproxyapi.ConfigureManagedProxyRecovery(dataDir); err != nil {
-		log.Printf("Failed to recover service-owned system proxy: %v", err)
+		log.Errorf("Failed to recover service-owned system proxy: %v", err)
 	}
 	if err := dnsapi.Configure(dataDir); err != nil {
-		log.Printf("Failed to recover service-owned DNS: %v", err)
+		log.Errorf("Failed to recover service-owned DNS: %v", err)
 	}
 	if err := coreapi.ConfigureDesiredCore(dataDir); err != nil {
 		return fmt.Errorf("recover desired core state: %w", err)

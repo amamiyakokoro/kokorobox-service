@@ -85,14 +85,14 @@ func clearSysproxyLease() {
 		lease.reconcileTimer.Stop()
 	}
 	if err := lease.runner.Close(); err != nil {
-		log.Printf("Failed to close system proxy owner: %v", err)
+		log.Errorf("Failed to close system proxy owner: %v", err)
 	}
 }
 
 func forgetSysproxyLease() {
 	clearSysproxyLease()
 	if err := removeManagedProxyRecord(); err != nil {
-		log.Printf("Failed to remove managed system proxy record: %v", err)
+		log.Errorf("Failed to remove managed system proxy record: %v", err)
 	}
 }
 
@@ -115,7 +115,7 @@ func expireSysproxyLease(generation uint64) {
 		return nil
 	})
 	if err != nil {
-		log.Printf("Failed to release expired system proxy lease: %v", err)
+		log.Errorf("Failed to release expired system proxy lease: %v", err)
 	}
 }
 

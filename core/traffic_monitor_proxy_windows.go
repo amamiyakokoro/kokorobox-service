@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/amamiyakokoro/kokorobox-service/listen"
 	"github.com/amamiyakokoro/kokorobox-service/listen/namedpipe"
-	"log"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -46,7 +46,7 @@ func startTrafficMonitorProxy(launch *launchSession, sddl string) (func(), error
 
 	return func() {
 		if err := server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("Failed to close TrafficMonitor compatibility pipe: %v", err)
+			log.Errorf("Failed to close TrafficMonitor compatibility pipe: %v", err)
 		}
 	}, nil
 }

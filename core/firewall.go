@@ -2,10 +2,10 @@ package core
 
 import (
 	"fmt"
-	"log"
 	"runtime"
 
 	"github.com/amamiyakokoro/kokorobox-service/core/firewall"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 func (cm *CoreManager) ensureLaunchFirewall(launch *launchSession) error {
@@ -20,7 +20,7 @@ func (cm *CoreManager) ensureLaunchFirewall(launch *launchSession) error {
 func (cm *CoreManager) configureLaunchFirewall(launch *launchSession) {
 	if err := cm.ensureLaunchFirewall(launch); err != nil {
 		message := fmt.Sprintf("Core LAN firewall setup failed: %v", err)
-		log.Print(message)
+		log.Warnf("%s", message)
 		line := fmt.Sprintf("level=warning msg=%q\n", message)
 		if launch.logWriter != nil {
 			_, _ = launch.logWriter.Write([]byte(line))

@@ -36,7 +36,7 @@ func (p *Program) Start(s kservice.Service) error {
 func (p *Program) run() {
 	logFile, err := log.InitLogging()
 	if err != nil {
-		log.Printf("Failed to initialize logging: %v\n", err)
+		log.Errorf("Failed to initialize logging: %v\n", err)
 	}
 	if logFile != nil {
 		defer logFile.Close()
@@ -51,7 +51,7 @@ func (p *Program) run() {
 func (p *Program) Stop(s kservice.Service) error {
 	log.Println("Service is stopping...")
 	if err := route.Stop(); err != nil {
-		log.Printf("Service stop cleanup failed: %v", err)
+		log.Errorf("Service stop cleanup failed: %v", err)
 		return err
 	}
 	log.Println("Service is stopped")

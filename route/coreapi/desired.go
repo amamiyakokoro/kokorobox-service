@@ -168,7 +168,7 @@ func (m *desiredCoreManager) reconcile() {
 		options = append(options, corepkg.WithLogFileGroup(*m.logGroup))
 	}
 	if err := m.core.StartCoreWithProfile(nil, options...); err != nil {
-		log.Printf("Failed to reconcile desired core state: %v", err)
+		log.Errorf("Failed to reconcile desired core state: %v", err)
 	}
 }
 

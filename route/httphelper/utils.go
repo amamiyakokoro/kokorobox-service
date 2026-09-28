@@ -126,7 +126,11 @@ func RequestLogger(next http.Handler) http.Handler {
 		case status >= http.StatusBadRequest:
 			log.S().Warnw("HTTP request completed", fields...)
 		default:
-			log.S().Infow("HTTP request completed", fields...)
+			if isPollingRequest(r) {
+				log.S().Debugw("HTTP request completed", fields...)
+			} else {
+				log.S().Infow("HTTP request completed", fields...)
+			}
 		}
 	})
 }
@@ -136,9 +140,6 @@ func shouldLogResponse(r *http.Request, status int) bool {
 }
 
 func shouldLogRequest(r *http.Request) bool {
-	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		return false
-	}
 	if isCoreControllerRequest(r.URL.Path) {
 		return false
 	}
@@ -146,6 +147,20 @@ func shouldLogRequest(r *http.Request) bool {
 		return false
 	}
 	return !headerContainsToken(r.Header, "Accept", "text/event-stream")
+}
+
+// Healthy status polling is useful when debugging, but should not fill the
+// normal service log. Failed requests keep their warning/error audit entries.
+func isPollingRequest(r *http.Request) bool {
+	if r.Method != http.MethodGet {
+		return false
+	}
+	switch r.URL.Path {
+	case "/ping", "/test", "/meta", "/core/status", "/process-router/status", "/process-router/logs":
+		return true
+	default:
+		return false
+	}
 }
 
 func isCoreControllerRequest(path string) bool {
@@ -165,7 +180,7 @@ func SendJSONWithStatus(w http.ResponseWriter, statusCode int, status string, me
 		Message: i18n.Text(locale, message),
 	}
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("Failed to encode HTTP JSON response: %v", err)
+		log.Errorf("Failed to encode HTTP JSON response: %v", err)
 	}
 }
 

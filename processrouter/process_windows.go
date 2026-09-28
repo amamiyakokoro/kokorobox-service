@@ -159,11 +159,15 @@ func (p *windowsNativeProcess) readEvents(reader io.Reader) {
 	for scanner.Scan() {
 		var event routerEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			recordDiagnostic(fmt.Sprintf("Invalid process router output: %v", err))
-			log.Printf("Ignoring invalid process router output: %v", err)
+			recordDiagnosticAt("warning", fmt.Sprintf("Invalid process router output: %v", err))
+			log.Warnf("Ignoring invalid process router output: %v", err)
 			continue
 		}
 		p.events <- event
+	}
+	if err := scanner.Err(); err != nil {
+		recordDiagnosticAt("error", fmt.Sprintf("Failed to read process router events: %v", err))
+		log.Errorf("Failed to read process router events: %v", err)
 	}
 }
 
@@ -172,11 +176,11 @@ func (p *windowsNativeProcess) readErrors(reader io.Reader) {
 	scanner.Buffer(make([]byte, 4096), 64*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if len(line) > 1000 {
-			line = line[:1000]
-		}
-		recordDiagnostic(line)
-		log.Printf("Native process router: %s", line)
+		recordNativeDiagnostic(line)
+	}
+	if err := scanner.Err(); err != nil {
+		recordDiagnosticAt("error", fmt.Sprintf("Failed to read process router diagnostics: %v", err))
+		log.Errorf("Failed to read process router diagnostics: %v", err)
 	}
 }
 

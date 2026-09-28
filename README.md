@@ -48,6 +48,12 @@ Service log messages and service-owned diagnostic errors use English regardless
 of `--locale` or `KOKOROBOX_LOCALE`. CLI help and HTTP responses retain their
 supported display languages. Paths, process names, and native output are preserved.
 
+Use `--log-level debug|info|warn|error` to change the recording threshold
+(default: `info`). Healthy status polling is recorded at `debug`; failed HTTP
+requests and state-changing operations remain in the normal audit log. Successful
+log retrieval never logs itself. Process-routing diagnostic entries include a
+`level` field; legacy ProxyBridge messages are classified using known prefixes.
+
 - [Local API, request bodies, and authentication](docs/API.md)
 
 ## License

@@ -5,7 +5,6 @@ package core
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 const startupNotifyDirPrefix = "kokorobox-core-notify-"
@@ -63,7 +64,7 @@ func createNativeStartupHook(token string) (*coreStartupHook, error) {
 func cleanupStaleStartupNotifyDirs() {
 	dirs, err := filepath.Glob(filepath.Join(os.TempDir(), startupNotifyDirPrefix+"*"))
 	if err != nil {
-		log.Printf("Failed to find stale core startup notification directories: %v", err)
+		log.Errorf("Failed to find stale core startup notification directories: %v", err)
 		return
 	}
 
@@ -72,7 +73,7 @@ func cleanupStaleStartupNotifyDirs() {
 			continue
 		}
 		if err := removeStartupNotifyDir(dir); err != nil {
-			log.Printf("Failed to clean up stale core startup notification directory: %v", err)
+			log.Errorf("Failed to clean up stale core startup notification directory: %v", err)
 		}
 	}
 }

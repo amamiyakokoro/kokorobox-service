@@ -3,16 +3,15 @@
 package core
 
 import (
-	"log"
-
 	"github.com/amamiyakokoro/kokorobox-service/core/sandbox"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 type linuxAutoLauncher struct{}
 
 func (linuxAutoLauncher) Command(launch *launchSession) (*coreCommand, error) {
 	if err := sandbox.Probe(); err != nil {
-		log.Printf("Core runtime mode: falling back to direct launch (chroot sandbox unavailable: %v)", err)
+		log.Warnf("Core runtime mode: falling back to direct launch (chroot sandbox unavailable: %v)", err)
 		return (linuxDirectLauncher{}).Command(launch)
 	}
 	log.Printf("Core runtime mode: automatically selected chroot sandbox")
@@ -21,11 +20,11 @@ func (linuxAutoLauncher) Command(launch *launchSession) (*coreCommand, error) {
 		if sandbox.IsConfigError(err) {
 			return nil, err
 		}
-		log.Printf("Core runtime mode: falling back to direct launch (failed to prepare chroot sandbox: %v)", err)
+		log.Warnf("Core runtime mode: falling back to direct launch (failed to prepare chroot sandbox: %v)", err)
 		return (linuxDirectLauncher{}).Command(launch)
 	}
 	command.startFallback = func(err error) (*coreCommand, error) {
-		log.Printf("Core runtime mode: falling back to direct launch (sandbox core launch failed: %v)", err)
+		log.Warnf("Core runtime mode: falling back to direct launch (sandbox core launch failed: %v)", err)
 		return (linuxDirectLauncher{}).Command(launch)
 	}
 	return command, nil

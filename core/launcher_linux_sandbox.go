@@ -4,12 +4,12 @@ package core
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/amamiyakokoro/kokorobox-service/core/sandbox"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 type linuxSandboxLauncher struct{}
@@ -38,7 +38,7 @@ func (linuxSandboxLauncher) Command(launch *launchSession) (*coreCommand, error)
 	}
 	command := newCoreCommand(sandboxCommand.Cmd, func() {
 		if err := sandboxCommand.Cleanup(); err != nil {
-			log.Printf("Failed to clean up core sandbox: %v", err)
+			log.Errorf("Failed to clean up core sandbox: %v", err)
 		}
 	})
 	command.afterStart = sandboxCommand.AwaitExec

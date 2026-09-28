@@ -94,7 +94,7 @@ func scheduleManagedProxyRecovery() {
 				return nil
 			}
 			if err := recoverManagedProxy(); err != nil {
-				log.Printf("Failed to retry managed system proxy recovery: %v", err)
+				log.Errorf("Failed to retry managed system proxy recovery: %v", err)
 				scheduleManagedProxyRecovery()
 			}
 			return nil

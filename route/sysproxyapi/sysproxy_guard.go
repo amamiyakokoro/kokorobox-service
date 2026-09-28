@@ -93,7 +93,7 @@ func configureSysproxyGuard(r *http.Request, enabled bool, mode sysproxyGuardMod
 
 func configureSysproxyGuardBestEffort(r *http.Request, enabled bool, mode sysproxyGuardMode, opts *sysproxy.Options) {
 	if err := configureSysproxyGuard(r, enabled, mode, opts); err != nil {
-		log.Printf("System proxy configured, but system proxy guard failed to start: %v", err)
+		log.Warnf("System proxy configured, but system proxy guard failed to start: %v", err)
 		publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, mode, false, "Failed to start system proxy guard; it has stopped", err)
 	}
 }
@@ -168,7 +168,7 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 		if err != nil {
 			errText := err.Error()
 			if errText != lastErr {
-				log.Printf("Failed to check system proxy guard: %v", err)
+				log.Errorf("Failed to check system proxy guard: %v", err)
 				publishSysproxyGuardEvent(sysproxyEventGuardCheckFailed, config.mode, true, "Failed to check system proxy guard", err)
 				lastErr = errText
 			}
@@ -202,7 +202,7 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 			if err != nil {
 				errText := err.Error()
 				if errText != lastErr {
-					log.Printf("Failed to restore system proxy settings: %v", err)
+					log.Errorf("Failed to restore system proxy settings: %v", err)
 					publishSysproxyGuardEvent(sysproxyEventGuardRestoreFailed, config.mode, true, "Failed to restore system proxy settings", err)
 					lastErr = errText
 				}
@@ -231,7 +231,7 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 			}
 			errText := err.Error()
 			if errText != lastErr {
-				log.Printf("Failed to watch system proxy changes; retrying: %v", err)
+				log.Errorf("Failed to watch system proxy changes; retrying: %v", err)
 				publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, config.mode, true, "Failed to watch system proxy changes; retrying", err)
 				lastErr = errText
 			}

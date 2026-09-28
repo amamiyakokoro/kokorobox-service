@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 const logTrimLowWatermarkRatio = 0.7
@@ -220,7 +221,7 @@ func (w *boundedLogWriter) reportErrorLocked(err error) {
 		return
 	}
 	w.lastError = message
-	log.Printf("Failed to write core log: %v", err)
+	log.Errorf("Failed to write core log: %v", err)
 }
 
 func coreLogSettingsFromProfile(profile LaunchProfile, access fileAccess) coreLogSettings {

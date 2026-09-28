@@ -3,10 +3,10 @@
 package core
 
 import (
-	"log"
 	"strings"
 
 	"github.com/amamiyakokoro/kokorobox-service/identity"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 )
 
 const (
@@ -34,7 +34,7 @@ func newCoreLauncher(launch *launchSession) coreLauncher {
 	case CoreRunModeAuto:
 		return linuxAutoLauncher{}
 	default:
-		log.Printf("Invalid core runtime mode %q; using auto", mode)
+		log.Warnf("Invalid core runtime mode %q; using auto", mode)
 		return linuxAutoLauncher{}
 	}
 }

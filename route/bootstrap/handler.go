@@ -44,7 +44,7 @@ func newHandler(verify peerVerifier, restrict socketRestrictor) http.HandlerFunc
 			return
 		}
 		if err := restrict(uid); err != nil {
-			log.Printf("Failed to restrict initialized macOS service socket: %v", err)
+			log.Errorf("Failed to restrict initialized macOS service socket: %v", err)
 			httphelper.SendError(w, err)
 			return
 		}

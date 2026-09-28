@@ -42,3 +42,36 @@ func TestLogsStayEnglishAcrossDisplayLocales(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordingThresholdAndSeverity(t *testing.T) {
+	previous := minimumLevel.Level()
+	t.Cleanup(func() { minimumLevel.SetLevel(previous) })
+	var output bytes.Buffer
+	logger := newLogger(zapcore.AddSync(&output))
+	if err := SetLevel("warning"); err != nil {
+		t.Fatal(err)
+	}
+	logger.Info("healthy polling")
+	logger.Warn("recoverable condition")
+	logger.Error("operation failed")
+	if err := SetLevel("debug"); err != nil {
+		t.Fatal(err)
+	}
+	logger.Debug("diagnostic")
+	if err := SetLevel("invalid"); err == nil {
+		t.Fatal("invalid log level accepted")
+	}
+	if minimumLevel.Level() != zapcore.DebugLevel {
+		t.Fatal("invalid level changed threshold")
+	}
+	decoder := json.NewDecoder(&output)
+	for _, expected := range []string{"warn", "error", "debug"} {
+		var entry map[string]any
+		if err := decoder.Decode(&entry); err != nil {
+			t.Fatal(err)
+		}
+		if entry["level"] != expected {
+			t.Fatalf("got %v, want %s", entry["level"], expected)
+		}
+	}
+}

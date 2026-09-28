@@ -6,6 +6,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/i18n"
 	"github.com/amamiyakokoro/kokorobox-service/identity"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +18,7 @@ var (
 	listen      string
 	defaultAddr string
 	locale      string
+	logLevel    string
 )
 
 var MainCmd = &cobra.Command{
@@ -71,7 +73,9 @@ func init() {
 	MainCmd.PersistentFlags().StringVarP(&device, "device", "d", "", i18n.DefaultText("Specify network device"))
 	MainCmd.PersistentFlags().StringVarP(&listen, "listen", "l", defaultAddr, i18n.DefaultText("Listen address"))
 	MainCmd.PersistentFlags().StringVar(&locale, "locale", string(i18n.Default()), i18n.DefaultText("Output language: en, zh-CN, or zh-TW"))
-	MainCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	MainCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn, or error")
+	MainCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		i18n.SetDefault(locale)
+		return log.SetLevel(logLevel)
 	}
 }

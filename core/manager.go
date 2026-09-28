@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/amamiyakokoro/kokorobox-service/core/controller"
 	"github.com/amamiyakokoro/kokorobox-service/core/security"
+	"github.com/amamiyakokoro/kokorobox-service/log"
 
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -368,7 +368,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	command, err := newCoreLauncher(launch).Command(launch)
 	if err != nil {
 		if closeErr := logWriter.Close(); closeErr != nil {
-			log.Printf("Failed to close core log file: %v", closeErr)
+			log.Errorf("Failed to close core log file: %v", closeErr)
 		}
 		closeProcessController(controller)
 		launch.cleanupNow()
@@ -381,7 +381,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	launch.addCleanup(command.cleanupNow)
 	launch.addCleanup(func() {
 		if err := logWriter.Close(); err != nil {
-			log.Printf("Failed to close core log file: %v", err)
+			log.Errorf("Failed to close core log file: %v", err)
 		}
 	})
 	logEventWatcher := newCoreLogEventWatcher(cm)
@@ -416,7 +416,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	}
 
 	if err := setProcessPriority(pid, launch.cpuPriority); err != nil {
-		log.Printf("Failed to set core process priority: %v", err)
+		log.Errorf("Failed to set core process priority: %v", err)
 	}
 
 	cm.cmd = cmd
@@ -447,7 +447,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		return err
 	}
 	if cleanup, err := startTrafficMonitorProxy(launch, cm.trafficMonitorPipeSDDL); err != nil {
-		log.Printf("Failed to start TrafficMonitor compatibility pipe: %v", err)
+		log.Errorf("Failed to start TrafficMonitor compatibility pipe: %v", err)
 	} else {
 		launch.addCleanup(cleanup)
 	}
@@ -496,7 +496,7 @@ func (cm *CoreManager) RestartCoreWithProfile(profile *LaunchProfile, options ..
 
 	cm.emitCoreEvent(CoreEventRestarting, "Core is restarting", nil)
 	if err := cm.stopCoreLocked(); err != nil {
-		log.Printf("Failed to stop process: %v", err)
+		log.Errorf("Failed to stop process: %v", err)
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -570,7 +570,7 @@ func closeProcessController(controller processController) {
 		return
 	}
 	if err := controller.Close(); err != nil {
-		log.Printf("Failed to close core process controller: %v", err)
+		log.Errorf("Failed to close core process controller: %v", err)
 	}
 }
 
@@ -595,7 +595,7 @@ func (cm *CoreManager) monitorProcess(cmd *exec.Cmd, errBuffer *boundedOutputBuf
 	cm.mutex.Unlock()
 
 	if err != nil {
-		log.Printf("Core process exited unexpectedly: %v\nstderr: %s", err, errBuffer.String())
+		log.Errorf("Core process exited unexpectedly: %v\nstderr: %s", err, errBuffer.String())
 	} else {
 		log.Printf("Core process exited (PID: %d)", cmd.Process.Pid)
 	}
@@ -629,10 +629,10 @@ func (cm *CoreManager) handleStartupNotification(launch *launchSession) {
 	cm.mutex.Unlock()
 
 	if err := security.SecureBinary(launch.executablePath); err != nil {
-		log.Printf("Failed to secure core file after startup notification: %v", err)
+		log.Errorf("Failed to secure core file after startup notification: %v", err)
 	}
 	if err := hardenLaunchControllerEndpoint(launch); err != nil {
-		log.Printf("Failed to secure core controller IPC after startup notification: %v", err)
+		log.Errorf("Failed to secure core controller IPC after startup notification: %v", err)
 	}
 
 	newPID := oldPID
@@ -699,12 +699,12 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 		newPID, ok := findManagedCorePID(controller, oldPID, launch)
 		if ok {
 			if err := security.SecureBinary(launch.executablePath); err != nil {
-				log.Printf("Failed to secure core file before takeover: %v", err)
+				log.Errorf("Failed to secure core file before takeover: %v", err)
 				_ = controller.Stop(newPID)
 				return false
 			}
 			if err := hardenLaunchControllerEndpoint(launch); err != nil {
-				log.Printf("Failed to secure core controller IPC before takeover: %v", err)
+				log.Errorf("Failed to secure core controller IPC before takeover: %v", err)
 				_ = controller.Stop(newPID)
 				return false
 			}
@@ -733,7 +733,7 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 func findManagedCorePID(controller processController, oldPID int32, launch *launchSession) (int32, bool) {
 	pids, err := controller.PIDs()
 	if err != nil {
-		log.Printf("Failed to query core process group: %v", err)
+		log.Errorf("Failed to query core process group: %v", err)
 		return 0, false
 	}
 
@@ -827,7 +827,7 @@ func (cm *CoreManager) monitorPID(stopChan <-chan struct{}) {
 
 			exists, err := process.PidExists(pid)
 			if err != nil {
-				log.Printf("Failed to check core process: %v", err)
+				log.Errorf("Failed to check core process: %v", err)
 				continue
 			}
 			if !exists && cm.isRunning.Load() {
@@ -940,7 +940,7 @@ func (cm *CoreManager) IsHealthy() bool {
 	}
 
 	if info.Memory > 1024*1024*1024 {
-		log.Printf("Warning: core process memory usage is too high (%s)", info.MemoryFormat)
+		log.Warnf("Warning: core process memory usage is too high (%s)", info.MemoryFormat)
 	}
 
 	return true

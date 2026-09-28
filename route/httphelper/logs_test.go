@@ -20,3 +20,18 @@ func TestLogPollingDoesNotGenerateMoreLogs(t *testing.T) {
 		t.Fatal("service operations must still be logged")
 	}
 }
+
+func TestStatusPollingAndMutationAudit(t *testing.T) {
+	for _, path := range []string{"/ping", "/test", "/meta", "/core/status", "/process-router/status", "/process-router/logs"} {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		if !isPollingRequest(r) || !shouldLogResponse(r, http.StatusForbidden) {
+			t.Errorf("polling classification: %s", path)
+		}
+	}
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch} {
+		r := httptest.NewRequest(method, "/process-router/rules", nil)
+		if isPollingRequest(r) || !shouldLogRequest(r) || !shouldLogResponse(r, http.StatusOK) {
+			t.Errorf("mutation must remain audited: %s", method)
+		}
+	}
+}

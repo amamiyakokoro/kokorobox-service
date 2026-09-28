@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	minimumLevel   = zap.NewAtomicLevelAt(zapcore.InfoLevel)
 	logger         = newLogger(zapcore.AddSync(os.Stderr))
 	loggerMu       sync.RWMutex
 	sugar          = logger.Sugar()
@@ -125,8 +126,28 @@ func newLogger(ws zapcore.WriteSyncer) *zap.Logger {
 		pretty:     true,
 		stackArray: true,
 	}
-	return zap.New(zapcore.NewCore(encoder, ws, zapcore.InfoLevel), zap.AddCaller(), zap.AddCallerSkip(1))
+	return zap.New(zapcore.NewCore(encoder, ws, minimumLevel), zap.AddCaller(), zap.AddCallerSkip(1))
 }
+
+// SetLevel changes the recording threshold without replacing the log writer.
+func SetLevel(value string) error {
+	if value == "warning" {
+		value = "warn"
+	}
+	if value != "debug" && value != "info" && value != "warn" && value != "error" {
+		return fmt.Errorf("Invalid log level %q: expected debug, info, warn, or error", value)
+	}
+	level, err := zapcore.ParseLevel(value)
+	if err != nil {
+		return err
+	}
+	minimumLevel.SetLevel(level)
+	return nil
+}
+
+func Debugf(format string, values ...any) { S().Debugf(format, values...) }
+func Warnf(format string, values ...any)  { S().Warnf(format, values...) }
+func Errorf(format string, values ...any) { S().Errorf(format, values...) }
 
 func setLogger(newLog *zap.Logger) {
 	loggerMu.Lock()
