@@ -48,6 +48,18 @@ func TestDiagnosticLevelsAndUTF8Bounds(t *testing.T) {
 		{"diagnostic route process=error.exe pid=1 destination=example.com:443 result=DIRECT", "info"},
 		{"diagnostic engine=Added rule for process 'Failed to.exe'", "info"},
 		{"diagnostic engine=ProxyBridge started", "info"},
+		{"diagnostic engine=Added rule ID: 5 for process 'Failed to.exe' (Action: 2)", "debug"},
+		{"diagnostic engine=Deleted rule ID: 5", "debug"},
+		{"diagnostic engine=Updated rule ID: 5 (ProxyConfigId: 0)", "debug"},
+		{"diagnostic engine=Enabled rule ID: 5", "debug"},
+		{"diagnostic engine=Disabled rule ID: 5", "debug"},
+		{"diagnostic engine=Moved rule ID 5 to position 1", "debug"},
+		{"diagnostic engine=Rule: game.exe -> BLOCK", "debug"},
+		{"diagnostic engine=level=debug Pending rule: game.exe -> BLOCK", "debug"},
+		{"diagnostic engine=level=debug Temporary BLOCK guard installed for rule replacement", "debug"},
+		{"diagnostic engine=Active routing rules committed: applications=1 exclusions=2", "info"},
+		{"diagnostic engine=Active application rule: priority=1 process=error.exe action=BLOCK protocol=BOTH", "info"},
+		{"diagnostic engine=Active exclusion: local destinations -> DIRECT (hosts=127.*.*.*)", "info"},
 	} {
 		if got := nativeDiagnosticLevel(test.message); got != test.level {
 			t.Errorf("%s: got %s, want %s", test.message, got, test.level)

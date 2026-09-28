@@ -53,6 +53,9 @@ Use `--log-level debug|info|warn|error` to change the recording threshold
 requests and state-changing operations remain in the normal audit log. Successful
 log retrieval never logs itself. Process-routing diagnostic entries include a
 `level` field; legacy ProxyBridge messages are classified using known prefixes.
+Rule edits and temporary replacement guards are recorded at `debug`. Once a
+replacement succeeds, `info` entries list the committed application rules and
+the destination scope of mandatory exclusions; real `BLOCK` rules remain visible.
 
 - [Local API, request bodies, and authentication](docs/API.md)
 

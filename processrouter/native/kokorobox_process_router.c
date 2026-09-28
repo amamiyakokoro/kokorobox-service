@@ -32,6 +32,13 @@ static UINT32 guard_id = 0;
 static BOOL engine_running = FALSE;
 static char active_processes[MAX_PROCESS_LIST] = "";
 static SRWLOCK active_processes_lock = SRWLOCK_INIT;
+static const char *mandatory_network_targets =
+    "127.*.*.*;169.254.*.*;224.0.0.0-239.255.255.255;*.*.*.255;"
+    "::1;fe80::/10;ff00::/8";
+static const char *mandatory_process_names =
+    "KokoroBox.exe;mihomo.exe;mihomo-alpha.exe;kokorobox-service.exe;sparkle-service.exe;"
+    "kokorobox-process-router.exe;crashpad_handler.exe;elevate.exe;"
+    "kokorobox-desktop-windows-*-setup.exe";
 
 static BOOL wildcard_match_ci(const char *pattern, const char *value) {
     const char *star = NULL;
@@ -95,7 +102,58 @@ static void diagnostic_connection(const char *process_name, DWORD pid, const cha
 
 static void diagnostic_log(const char *message) {
     if (!message || !message[0]) return;
-    fprintf(stderr, "diagnostic engine=%.*s\n", 900, message);
+    // ProxyBridge's startup dump still includes the atomic BLOCK guard. It is
+    // an intermediate state, not the committed policy reported below.
+    if (strncmp(message, "Rule: ", 6) == 0)
+        fprintf(stderr, "diagnostic engine=level=debug Pending rule: %.*s\n", 900, message + 6);
+    else
+        fprintf(stderr, "diagnostic engine=%.*s\n", 900, message);
+    fflush(stderr);
+}
+
+static const char *action_name(RuleAction action) {
+    switch (action) {
+        case RULE_ACTION_PROXY: return "PROXY";
+        case RULE_ACTION_DIRECT: return "DIRECT";
+        case RULE_ACTION_BLOCK: return "BLOCK";
+        default: return "UNKNOWN";
+    }
+}
+
+static const char *protocol_name(RuleProtocol protocol) {
+    switch (protocol) {
+        case RULE_PROTOCOL_TCP: return "TCP";
+        case RULE_PROTOCOL_UDP: return "UDP";
+        case RULE_PROTOCOL_BOTH: return "BOTH";
+        default: return "UNKNOWN";
+    }
+}
+
+static void diagnostic_active_rules(const ParsedRule *rules, size_t count) {
+    size_t index;
+    size_t enabled = 0;
+    for (index = 0; index < count; ++index) {
+        if (rules[index].enabled) enabled++;
+    }
+    fprintf(stderr, "diagnostic engine=Active routing rules committed: applications=%zu exclusions=2 loopback_bypass=enabled\n", enabled);
+    fprintf(stderr, "diagnostic engine=Active exclusion: rule_id=%u local/link-local/multicast/broadcast destinations -> DIRECT (hosts=%s)\n",
+            rule_ids[0], mandatory_network_targets);
+    fprintf(stderr, "diagnostic engine=Active exclusion: rule_id=%u internal processes -> DIRECT (processes=%s)\n",
+            rule_ids[1], mandatory_process_names);
+    for (index = 0; index < count; ++index) {
+        const ParsedRule *rule = &rules[index];
+        if (!rule->enabled) {
+            fprintf(stderr, "diagnostic engine=level=debug Inactive application rule: priority=%u process=%s action=%s protocol=%s\n",
+                    rule->priority, rule->process_pattern, action_name(rule->action), protocol_name(rule->protocol));
+            continue;
+        }
+        fprintf(stderr, "diagnostic engine=Active application rule: priority=%u rule_id=%u process=%s action=%s protocol=%s",
+                rule->priority, rule_ids[index + 2], rule->process_pattern,
+                action_name(rule->action), protocol_name(rule->protocol));
+        if (rule->action == RULE_ACTION_PROXY)
+            fprintf(stderr, " proxy=SOCKS5://127.0.0.1:%d", KOKORO_SOCKS_PORT);
+        fputc('\n', stderr);
+    }
     fflush(stderr);
 }
 
@@ -236,16 +294,9 @@ static BOOL add_managed_rule(const char *process_name, const char *target_hosts,
 }
 
 static BOOL add_mandatory_exclusions(void) {
-    static const char *network_targets =
-        "127.*.*.*;169.254.*.*;224.0.0.0-239.255.255.255;*.*.*.255;"
-        "::1;fe80::/10;ff00::/8";
-    static const char *process_names =
-        "KokoroBox.exe;mihomo.exe;mihomo-alpha.exe;kokorobox-service.exe;sparkle-service.exe;"
-        "kokorobox-process-router.exe;crashpad_handler.exe;elevate.exe;"
-        "kokorobox-desktop-windows-*-setup.exe";
-    return add_managed_rule("*", network_targets, RULE_PROTOCOL_BOTH,
+    return add_managed_rule("*", mandatory_network_targets, RULE_PROTOCOL_BOTH,
                             RULE_ACTION_DIRECT, 0, TRUE) &&
-           add_managed_rule(process_names, "*", RULE_PROTOCOL_BOTH,
+           add_managed_rule(mandatory_process_names, "*", RULE_PROTOCOL_BOTH,
                             RULE_ACTION_DIRECT, 0, TRUE);
 }
 
@@ -364,7 +415,18 @@ static BOOL replace_rules(const char *command) {
         emit("error", "at least one enabled rule is required");
         return FALSE;
     }
+    // Use the requested logging policy for the entire rebuild, including the
+    // first update and updates that turn diagnostics off.
+    ProxyBridge_SetLogCallback(diagnostic_logging ? diagnostic_log : NULL);
+    if (!diagnostic_logging) {
+        ProxyBridge_SetConnectionCallback(NULL);
+        ProxyBridge_SetTrafficLoggingEnabled(FALSE);
+    }
+    if (diagnostic_logging)
+        diagnostic_log("level=debug Rebuilding routing rules (atomic replacement)");
     if (!install_guard(guarded_processes)) return FALSE;
+    if (diagnostic_logging)
+        diagnostic_log("level=debug Temporary BLOCK guard installed for rule replacement");
     if (!clear_rules()) {
         emit("error", "unable to remove the previous rule set");
         return FALSE;
@@ -399,13 +461,8 @@ static BOOL replace_rules(const char *command) {
     ProxyBridge_SetProxyUdpDnsEnabled(proxy_udp_dns);
     ProxyBridge_SetFailClosedOnUnknownOwner(fail_closed);
     if (diagnostic_logging) {
-        ProxyBridge_SetLogCallback(diagnostic_log);
         ProxyBridge_SetTrafficLoggingEnabled(TRUE);
         ProxyBridge_SetConnectionCallback(diagnostic_connection);
-    } else {
-        ProxyBridge_SetConnectionCallback(NULL);
-        ProxyBridge_SetTrafficLoggingEnabled(FALSE);
-        ProxyBridge_SetLogCallback(NULL);
     }
     if (!engine_running) {
         if (!ProxyBridge_Start()) {
@@ -422,6 +479,10 @@ static BOOL replace_rules(const char *command) {
         return FALSE;
     }
     guard_id = 0;
+    if (diagnostic_logging) {
+        diagnostic_log("level=debug Temporary BLOCK guard removed; rule replacement complete");
+        diagnostic_active_rules(rules, parsed_count);
+    }
     emit("rules_replaced", NULL);
     return TRUE;
 }

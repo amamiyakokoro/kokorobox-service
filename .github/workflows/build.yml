@@ -106,6 +106,10 @@ jobs:
       shell: pwsh
       run: ./scripts/build-process-router.ps1 -OutputDir process-router
 
+    - name: Test committed routing rule logs without packet interception
+      shell: pwsh
+      run: ./scripts/test-process-router-logging.ps1 -ProxyBridgeIncludePath (Join-Path $env:RUNNER_TEMP "kokorobox-proxybridge/source/Windows/src")
+
     - name: Archive Process Router bundle
       shell: pwsh
       run: |

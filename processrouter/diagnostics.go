@@ -75,6 +75,13 @@ func nativeDiagnosticLevel(message string) string {
 	if strings.HasPrefix(text, "[pid]") || strings.HasPrefix(text, "[packet]") || strings.HasPrefix(text, "level=debug") {
 		return "debug"
 	}
+	// These describe edits or the pre-commit startup dump, not the final policy.
+	// Active-rule summaries have their own prefix and remain visible at info.
+	for _, prefix := range []string{"added rule id:", "deleted rule id:", "updated rule id:", "enabled rule id:", "disabled rule id:", "moved rule id ", "rule: "} {
+		if strings.HasPrefix(text, prefix) {
+			return "debug"
+		}
+	}
 	if strings.HasPrefix(text, "failed to ") || strings.HasPrefix(text, "invalid ") {
 		return "error"
 	}
