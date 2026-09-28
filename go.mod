@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/amamiyakokoro/sysproxy-go/v2 v2.0.1
-	github.com/ebitengine/purego v0.11.0
+	github.com/ebitengine/purego v0.11.1
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/render v1.0.3
 	github.com/kardianos/service v1.3.0
