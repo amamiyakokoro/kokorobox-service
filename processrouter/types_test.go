@@ -219,8 +219,8 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	port := listener.Addr().(*net.TCPAddr).Port
-	if !probeMihomo(port, true) {
-		t.Fatal("expected a valid SOCKS5 greeting")
+	if err := probeMihomo(port, true); err != nil {
+		t.Fatalf("expected a valid SOCKS5 greeting: %v", err)
 	}
 
 	invalidListener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -240,7 +240,7 @@ func TestProbeRequiresSOCKS5Greeting(t *testing.T) {
 		}
 	}()
 	invalidPort := invalidListener.Addr().(*net.TCPAddr).Port
-	if probeMihomo(invalidPort, true) {
+	if err := probeMihomo(invalidPort, true); err == nil {
 		t.Fatal("accepted an invalid SOCKS5 greeting")
 	}
 }

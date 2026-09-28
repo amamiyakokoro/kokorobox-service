@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -276,7 +274,11 @@ func (m *Manager) Reconcile() error {
 	}
 
 	requiresProxy := hasProxyRules(m.rules)
-	available := !requiresProxy || probeMihomo(m.rules.ProxyPort, m.rules.Platform == "windows")
+	var probeErr error
+	if requiresProxy {
+		probeErr = probeMihomo(m.rules.ProxyPort, m.rules.Platform == "windows")
+	}
+	available := probeErr == nil
 	policy := strconv.FormatUint(m.generation, 10) + ":" + strconv.FormatBool(available)
 	if policy != m.activePolicy {
 		if err := sendRules(m.process, buildRouterCommand(m.rules, available)); err != nil {
@@ -288,13 +290,7 @@ func (m *Manager) Reconcile() error {
 		}
 		m.activePolicy = policy
 	}
-	m.mihomoReady = available && requiresProxy
-	m.lastError = ""
-	if requiresProxy && !available {
-		m.state = StateBlocked
-	} else {
-		m.state = StateRunning
-	}
+	m.updateProxyHealthLocked(requiresProxy, probeErr)
 	return nil
 }
 
@@ -470,26 +466,4 @@ func (m *Manager) loadLocked() error {
 	m.desired = persisted.Enabled
 	m.generation++
 	return nil
-}
-
-func probeMihomo(port int, requireSOCKS bool) bool {
-	connection, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), probeTimeout)
-	if err != nil {
-		return false
-	}
-	defer connection.Close()
-	if !requireSOCKS {
-		return true
-	}
-	if err := connection.SetDeadline(time.Now().Add(probeTimeout)); err != nil {
-		return false
-	}
-	if _, err := connection.Write([]byte{0x05, 0x01, 0x00}); err != nil {
-		return false
-	}
-	response := make([]byte, 2)
-	if _, err := io.ReadFull(connection, response); err != nil {
-		return false
-	}
-	return response[0] == 0x05 && response[1] == 0x00
 }

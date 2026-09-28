@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -392,6 +393,9 @@ static BOOL replace_rules(const char *command) {
     }
 
     ProxyBridge_SetLocalhostViaProxy(FALSE);
+    // Local IPC (including ownerless TCP resets) is excluded from the managed
+    // policy. Bypass its owner lookup so it cannot stall proxy health checks.
+    ProxyBridge_SetLoopbackBypassEnabled(TRUE);
     ProxyBridge_SetProxyUdpDnsEnabled(proxy_udp_dns);
     ProxyBridge_SetFailClosedOnUnknownOwner(fail_closed);
     if (diagnostic_logging) {
