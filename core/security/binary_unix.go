@@ -16,10 +16,10 @@ func SecureBinary(corePath string) error {
 	}
 
 	if err := removeGroupAndOtherWrite(filepath.Dir(corePath)); err != nil {
-		return fmt.Errorf("加固核心目录权限失败：%w", err)
+		return fmt.Errorf("Failed to secure core directory permissions: %w", err)
 	}
 	if err := removeGroupAndOtherWrite(corePath); err != nil {
-		return fmt.Errorf("加固核心文件权限失败：%w", err)
+		return fmt.Errorf("Failed to secure core file permissions: %w", err)
 	}
 
 	return nil

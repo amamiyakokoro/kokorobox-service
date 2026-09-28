@@ -27,7 +27,7 @@ func captureSysproxyGuardRunner(r *http.Request) (sysproxyGuardRunner, error) {
 
 	peerEnv, err := readLinuxProcessEnv(peer.PID)
 	if err != nil {
-		return nil, fmt.Errorf("读取连接进程环境失败：%w", err)
+		return nil, fmt.Errorf("Failed to read connected process environment: %w", err)
 	}
 
 	return &linuxSysproxyGuardRunner{

@@ -174,7 +174,7 @@ func (p *linuxNativeProcess) Send(payload []byte) error {
 	if err := p.scanProcessesLocked(); err != nil {
 		if command.DiagnosticLogging {
 			recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
-			log.Printf("Linux 应用分流首次进程扫描失败: %v", err)
+			log.Printf("Initial Linux process router scan failed: %v", err)
 		}
 	}
 	p.emitLocked("rules_replaced", "")
@@ -242,14 +242,14 @@ func (p *linuxNativeProcess) monitorProcesses(ctx context.Context) {
 			snapshot, err := snapshotLinuxProcesses()
 			if err != nil {
 				recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
-				log.Printf("Linux 应用分流进程扫描失败: %v", err)
+				log.Printf("Linux process router scan failed: %v", err)
 				continue
 			}
 			p.mu.Lock()
 			if p.alive {
 				if err := p.applyProcessSnapshotLocked(snapshot); err != nil {
 					recordDiagnostic(fmt.Sprintf("Linux process scan failed: %v", err))
-					log.Printf("Linux 应用分流进程扫描失败: %v", err)
+					log.Printf("Linux process router scan failed: %v", err)
 				}
 			}
 			p.mu.Unlock()

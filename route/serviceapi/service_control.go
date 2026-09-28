@@ -56,7 +56,7 @@ func controlServiceAsync(w http.ResponseWriter, action string, message string, f
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		if err := fn(); err != nil {
-			log.Printf("%s 服务失败: %v", action, err)
+			log.Printf("Failed to %s service: %v", action, err)
 		}
 	}()
 }

@@ -31,7 +31,7 @@ func captureSysproxyGuardRunner(_ *http.Request) (sysproxyGuardRunner, error) {
 		if errors.Is(err, windows.ERROR_NO_TOKEN) {
 			return windowsSysproxyGuardRunner{}, nil
 		}
-		return nil, fmt.Errorf("打开线程用户令牌失败：%w", err)
+		return nil, fmt.Errorf("Failed to open thread user token: %w", err)
 	}
 	defer threadToken.Close()
 
@@ -44,7 +44,7 @@ func captureSysproxyGuardRunner(_ *http.Request) (sysproxyGuardRunner, error) {
 		windows.TokenImpersonation,
 		&duplicated,
 	); err != nil {
-		return nil, fmt.Errorf("复制线程用户令牌失败：%w", err)
+		return nil, fmt.Errorf("Failed to duplicate thread user token: %w", err)
 	}
 
 	return &windowsTokenSysproxyGuardRunner{token: duplicated}, nil
@@ -118,18 +118,18 @@ func (r *windowsTokenSysproxyGuardRunner) WaitChangeReady(ctx context.Context, o
 
 func (r *windowsTokenSysproxyGuardRunner) run(fn func() error) (err error) {
 	if r == nil || r.token == 0 {
-		return fmt.Errorf("系统代理守护用户令牌无效")
+		return fmt.Errorf("Invalid system proxy guard user token")
 	}
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
 	if err := windows.SetThreadToken(nil, r.token); err != nil {
-		return fmt.Errorf("切换系统代理守护用户失败：%w", err)
+		return fmt.Errorf("Failed to impersonate system proxy guard user: %w", err)
 	}
 	defer func() {
 		if revertErr := windows.RevertToSelf(); err == nil && revertErr != nil {
-			err = fmt.Errorf("恢复系统代理守护用户失败：%w", revertErr)
+			err = fmt.Errorf("Failed to revert system proxy guard user impersonation: %w", revertErr)
 		}
 	}()
 

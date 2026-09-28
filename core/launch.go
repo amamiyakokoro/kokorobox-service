@@ -79,12 +79,12 @@ func LoadLaunchProfile() (LaunchProfile, error) {
 		if os.IsNotExist(err) {
 			return LaunchProfile{Mode: CoreRunModeAuto}, nil
 		}
-		return LaunchProfile{}, fmt.Errorf("读取核心启动配置失败：%w", err)
+		return LaunchProfile{}, fmt.Errorf("Failed to read core launch configuration: %w", err)
 	}
 
 	var profile LaunchProfile
 	if err := json.Unmarshal(data, &profile); err != nil {
-		return LaunchProfile{}, fmt.Errorf("解析核心启动配置失败：%w", err)
+		return LaunchProfile{}, fmt.Errorf("Failed to parse core launch configuration: %w", err)
 	}
 
 	return normalizeLaunchProfile(profile)
@@ -99,23 +99,23 @@ func SaveLaunchProfile(profile LaunchProfile) error {
 	path := launchProfilePath()
 	if isZeroLaunchProfile(normalized) {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("清理核心启动配置失败：%w", err)
+			return fmt.Errorf("Failed to clean up core launch configuration: %w", err)
 		}
 		return nil
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("创建核心配置目录失败：%w", err)
+		return fmt.Errorf("Failed to create core configuration directory: %w", err)
 	}
 
 	data, err := json.MarshalIndent(normalized, "", "  ")
 	if err != nil {
-		return fmt.Errorf("序列化核心启动配置失败：%w", err)
+		return fmt.Errorf("Failed to serialize core launch configuration: %w", err)
 	}
 
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".launch-profile-*")
 	if err != nil {
-		return fmt.Errorf("保存核心启动配置失败：%w", err)
+		return fmt.Errorf("Failed to save core launch configuration: %w", err)
 	}
 	defer os.Remove(tmp.Name())
 	if err := tmp.Chmod(0o600); err != nil {
@@ -254,7 +254,7 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 	switch normalized.Mode {
 	case CoreRunModeAuto, CoreRunModeSandbox, CoreRunModeDirect:
 	default:
-		return LaunchProfile{}, fmt.Errorf("mode 仅支持 auto、sandbox 或 direct")
+		return LaunchProfile{}, fmt.Errorf("mode must be auto, sandbox, or direct")
 	}
 	if profile.SaveLogs != nil {
 		normalized.SaveLogs = new(*profile.SaveLogs)
@@ -276,7 +276,7 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 			}
 			absPath, err := filepath.Abs(trimmedPath)
 			if err != nil {
-				return LaunchProfile{}, fmt.Errorf("解析可信路径失败 %q：%w", trimmedPath, err)
+				return LaunchProfile{}, fmt.Errorf("Failed to resolve trusted path %q: %w", trimmedPath, err)
 			}
 			normalized.SafePaths = append(normalized.SafePaths, absPath)
 		}
@@ -287,7 +287,7 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 		for key, value := range profile.Env {
 			key = strings.TrimSpace(key)
 			if key == "" {
-				return LaunchProfile{}, fmt.Errorf("环境变量名不能为空")
+				return LaunchProfile{}, fmt.Errorf("Environment variable name cannot be empty")
 			}
 			normalized.Env[key] = value
 		}
@@ -296,7 +296,7 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 	if normalized.LogPath != "" {
 		absPath, err := filepath.Abs(normalized.LogPath)
 		if err != nil {
-			return LaunchProfile{}, fmt.Errorf("解析核心日志路径失败 %q：%w", normalized.LogPath, err)
+			return LaunchProfile{}, fmt.Errorf("Failed to resolve core log path %q: %w", normalized.LogPath, err)
 		}
 		normalized.LogPath = absPath
 	}
@@ -306,7 +306,7 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 	}
 
 	if normalized.CorePath == "" {
-		return LaunchProfile{}, fmt.Errorf("core_path 不能为空")
+		return LaunchProfile{}, fmt.Errorf("core_path cannot be empty")
 	}
 
 	corePath, err := resolveCoreExecutablePath(normalized.CorePath, false)
@@ -321,10 +321,10 @@ func normalizeLaunchProfile(profile LaunchProfile) (LaunchProfile, error) {
 func validateCoreArgs(args []string) error {
 	for i, arg := range args {
 		if arg == "" {
-			return fmt.Errorf("启动参数第 %d 项为空", i)
+			return fmt.Errorf("Launch argument at index %d is empty", i)
 		}
 		if arg == "--" {
-			return fmt.Errorf("-- 会截断 service 管理的启动参数，不能由客户端传入")
+			return fmt.Errorf("-- would truncate service-managed launch arguments and cannot be supplied by the client")
 		}
 		name, ok := coreArgName(arg)
 		if !ok {
@@ -332,9 +332,9 @@ func validateCoreArgs(args []string) error {
 		}
 		switch name {
 		case "post-up", "post-down":
-			return fmt.Errorf("-%s 由 service 管理，不能由客户端传入", name)
+			return fmt.Errorf("-%s is managed by the service and cannot be supplied by the client", name)
 		case "t", "v":
-			return fmt.Errorf("-%s 不是运行态启动参数", name)
+			return fmt.Errorf("-%s is not a runtime launch argument", name)
 		}
 	}
 	return nil
@@ -359,12 +359,12 @@ func resolveLaunchWorkingDir(corePath string, args []string) (string, error) {
 
 	workingDir = strings.TrimSpace(workingDir)
 	if workingDir == "" {
-		return "", fmt.Errorf("核心工作目录不能为空")
+		return "", fmt.Errorf("Core working directory cannot be empty")
 	}
 	if !filepath.IsAbs(workingDir) {
 		absPath, err := filepath.Abs(workingDir)
 		if err != nil {
-			return "", fmt.Errorf("解析核心工作目录失败 %q：%w", workingDir, err)
+			return "", fmt.Errorf("Failed to resolve core working directory %q: %w", workingDir, err)
 		}
 		workingDir = absPath
 	}
@@ -387,7 +387,7 @@ func configureManagedController(args []string) ([]string, string, string, func()
 		if cleanup != nil {
 			cleanup()
 		}
-		return nil, "", "", nil, fmt.Errorf("不支持的核心控制器网络: %s", controllerNet)
+		return nil, "", "", nil, fmt.Errorf("Unsupported core controller network: %s", controllerNet)
 	}
 
 	return filteredArgs, controllerNet, controllerAddr, cleanup, nil
@@ -453,13 +453,13 @@ func resolveCoreExecutablePath(rawPath string, allowEnv bool) (string, error) {
 		path = strings.TrimSpace(identity.Environment("KOKOROBOX_CORE_PATH", "SPARKLE_CORE_PATH"))
 	}
 	if path == "" {
-		return "", fmt.Errorf("未配置核心路径")
+		return "", fmt.Errorf("Core path is not configured")
 	}
 
 	if !filepath.IsAbs(path) {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			return "", fmt.Errorf("解析核心路径失败：%w", err)
+			return "", fmt.Errorf("Failed to resolve core path: %w", err)
 		}
 		path = absPath
 	}
@@ -473,16 +473,16 @@ func resolveCoreExecutablePath(rawPath string, allowEnv bool) (string, error) {
 		info, err := os.Stat(candidate)
 		if err == nil {
 			if info.IsDir() {
-				return "", fmt.Errorf("核心路径指向目录而非可执行文件: %s", candidate)
+				return "", fmt.Errorf("Core path points to a directory, not an executable: %s", candidate)
 			}
 			return candidate, nil
 		}
 		if !os.IsNotExist(err) {
-			return "", fmt.Errorf("检查核心路径失败：%w", err)
+			return "", fmt.Errorf("Failed to check core path: %w", err)
 		}
 	}
 
-	return "", fmt.Errorf("核心可执行文件不存在: %s", path)
+	return "", fmt.Errorf("Core executable does not exist: %s", path)
 }
 
 type coreStartupHook struct {
@@ -559,7 +559,7 @@ func newCoreStartupHook(waitNotification func() (bool, error), upFile string, po
 func randomToken(size int) (string, error) {
 	data := make([]byte, size)
 	if _, err := rand.Read(data); err != nil {
-		return "", fmt.Errorf("生成启动 hook token 失败：%w", err)
+		return "", fmt.Errorf("Failed to generate startup hook token: %w", err)
 	}
 	return hex.EncodeToString(data), nil
 }

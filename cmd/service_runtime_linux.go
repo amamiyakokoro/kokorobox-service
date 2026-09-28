@@ -26,7 +26,7 @@ func ensureServiceRuntimeExecutable() error {
 
 	executable, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("读取服务可执行文件路径失败：%w", err)
+		return fmt.Errorf("Failed to read service executable path: %w", err)
 	}
 
 	target, err := stageServiceExecutable(executable)
@@ -80,9 +80,9 @@ func stageServiceExecutable(source string) (string, error) {
 	case closeInputErr != nil:
 		return "", fmt.Errorf("Failed to close service binary: %w", closeInputErr)
 	case chmodErr != nil:
-		return "", fmt.Errorf("设置服务运行副本权限失败：%w", chmodErr)
+		return "", fmt.Errorf("Failed to set service runtime copy permissions: %w", chmodErr)
 	case closeTmpErr != nil:
-		return "", fmt.Errorf("关闭服务运行副本失败：%w", closeTmpErr)
+		return "", fmt.Errorf("Failed to close service runtime copy: %w", closeTmpErr)
 	}
 
 	if err := os.Rename(tmpPath, target); err != nil {
@@ -100,7 +100,7 @@ func hashFile(path string) (string, os.FileMode, error) {
 
 	info, err := file.Stat()
 	if err != nil {
-		return "", 0, fmt.Errorf("读取服务二进制信息失败：%w", err)
+		return "", 0, fmt.Errorf("Failed to read service binary information: %w", err)
 	}
 	if info.IsDir() {
 		return "", 0, fmt.Errorf("Service path points to a directory, not an executable: %s", path)
@@ -108,7 +108,7 @@ func hashFile(path string) (string, os.FileMode, error) {
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
-		return "", 0, fmt.Errorf("计算服务二进制摘要失败：%w", err)
+		return "", 0, fmt.Errorf("Failed to compute service binary digest: %w", err)
 	}
 
 	return hex.EncodeToString(hash.Sum(nil))[:16], info.Mode().Perm(), nil

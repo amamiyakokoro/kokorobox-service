@@ -16,7 +16,7 @@ const (
 
 func newCoreLauncher(launch *launchSession) coreLauncher {
 	if sandboxDisabled() {
-		log.Printf("核心运行模式：直接启动（%s 已启用）", disableLinuxSandboxEnv)
+		log.Printf("Core runtime mode: direct launch (%s is enabled)", disableLinuxSandboxEnv)
 		return linuxDirectLauncher{}
 	}
 
@@ -26,15 +26,15 @@ func newCoreLauncher(launch *launchSession) coreLauncher {
 	}
 	switch mode {
 	case CoreRunModeDirect:
-		log.Printf("核心运行模式：直接启动")
+		log.Printf("Core runtime mode: direct launch")
 		return linuxDirectLauncher{}
 	case CoreRunModeSandbox:
-		log.Printf("核心运行模式：强制 chroot 沙盒")
+		log.Printf("Core runtime mode: forced chroot sandbox")
 		return linuxSandboxLauncher{}
 	case CoreRunModeAuto:
 		return linuxAutoLauncher{}
 	default:
-		log.Printf("核心运行模式 %q 无效，按 auto 处理", mode)
+		log.Printf("Invalid core runtime mode %q; using auto", mode)
 		return linuxAutoLauncher{}
 	}
 }

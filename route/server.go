@@ -59,19 +59,19 @@ func Start(addr string) error {
 	keyDir := filepath.Join(dataDir, "keys")
 
 	if err := auth.InitKeyManager(keyDir); err != nil {
-		log.Printf("警告: 初始化密钥管理器失败: %v", err)
+		log.Printf("Warning: failed to initialize key manager: %v", err)
 	}
 
 	km := auth.GetKeyManager()
 	if km.IsInitialized() {
-		log.Println("密钥管理器已初始化")
+		log.Println("Key manager is initialized")
 	} else {
-		log.Println("警告：密钥管理器未初始化")
+		log.Println("Warning: key manager is not initialized")
 	}
 	if km.HasAuthorizedPrincipal() {
-		log.Println("请求方身份绑定已启用")
+		log.Println("Requestor identity binding is enabled")
 	} else {
-		log.Println("警告：请求方身份绑定未启用")
+		log.Println("Warning: requestor identity binding is not enabled")
 	}
 	if err := sysproxyapi.ConfigureManagedProxyRecovery(dataDir); err != nil {
 		log.Printf("Failed to recover service-owned system proxy: %v", err)
@@ -97,16 +97,16 @@ func Start(addr string) error {
 func Stop() error {
 	var errs []error
 	if err := sysproxyapi.StopManagedProxy(); err != nil {
-		errs = append(errs, fmt.Errorf("清理系统代理失败：%w", err))
+		errs = append(errs, fmt.Errorf("Failed to clean up system proxy settings: %w", err))
 	}
 	if err := dnsapi.Stop(); err != nil {
-		errs = append(errs, fmt.Errorf("清理 DNS 失败：%w", err))
+		errs = append(errs, fmt.Errorf("Failed to clean up DNS settings: %w", err))
 	}
 	if err := processrouterapi.Stop(); err != nil {
-		errs = append(errs, fmt.Errorf("停止应用分流失败：%w", err))
+		errs = append(errs, fmt.Errorf("Failed to stop process router: %w", err))
 	}
 	if err := coreapi.Stop(); err != nil {
-		errs = append(errs, fmt.Errorf("停止核心失败：%w", err))
+		errs = append(errs, fmt.Errorf("Failed to stop core: %w", err))
 	}
 	if err := closeServers(); err != nil {
 		errs = append(errs, err)
@@ -127,7 +127,7 @@ func startServer(addr string, startFunc func(string) error) error {
 			}
 
 			if err := syscall.Unlink(addr); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("unlink 错误：%w", err)
+				return fmt.Errorf("Unlink error: %w", err)
 			}
 		}
 
@@ -151,7 +151,7 @@ func closeServers() error {
 			continue
 		}
 		if err := shutdownServer(server); err != nil {
-			errs = append(errs, fmt.Errorf("关闭服务监听失败：%w", err))
+			errs = append(errs, fmt.Errorf("Failed to close service listener: %w", err))
 		}
 	}
 	return errors.Join(errs...)
@@ -175,7 +175,7 @@ func shutdownServer(server *http.Server) error {
 func ensureDirExists(dir string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("目录创建错误：%w", err)
+			return fmt.Errorf("Failed to create directory: %w", err)
 		}
 	}
 	return nil
@@ -184,7 +184,7 @@ func ensureDirExists(dir string) error {
 func StartHTTP(addr string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("http 监听错误：%w", err)
+		return fmt.Errorf("HTTP listen error: %w", err)
 	}
 	log.Printf("http Listen address: %s", addr)
 	server := &http.Server{
@@ -196,16 +196,16 @@ func StartHTTP(addr string) error {
 func StartUnix(addr string) error {
 	l, err := net.Listen("unix", addr)
 	if err != nil {
-		return fmt.Errorf("unix 监听错误：%w", err)
+		return fmt.Errorf("Unix socket listen error: %w", err)
 	}
 	if uid, ok := auth.GetKeyManager().GetAuthorizedUID(); ok {
 		if err := os.Chown(addr, int(uid), -1); err != nil {
 			_ = l.Close()
-			return fmt.Errorf("设置 unix socket 所有者失败：%w", err)
+			return fmt.Errorf("Failed to set Unix socket owner: %w", err)
 		}
 		if err := os.Chmod(addr, 0o600); err != nil {
 			_ = l.Close()
-			return fmt.Errorf("设置 unix socket 权限失败：%w", err)
+			return fmt.Errorf("Failed to set Unix socket permissions: %w", err)
 		}
 	} else if runtime.GOOS == "darwin" {
 		// Before authentication exists, the signed Desktop process reaches the
@@ -214,11 +214,11 @@ func StartUnix(addr string) error {
 		// immediately changes the socket to owner-only mode.
 		if err := os.Chmod(addr, 0o666); err != nil {
 			_ = l.Close()
-			return fmt.Errorf("设置 bootstrap unix socket 权限失败：%w", err)
+			return fmt.Errorf("Failed to set bootstrap Unix socket permissions: %w", err)
 		}
 	} else if err := os.Chmod(addr, 0o600); err != nil {
 		_ = l.Close()
-		return fmt.Errorf("设置 unix socket 权限失败：%w", err)
+		return fmt.Errorf("Failed to set Unix socket permissions: %w", err)
 	}
 	log.Printf("unix Listen address: %s", l.Addr().String())
 
@@ -240,7 +240,7 @@ func StartPipe(addr string) error {
 
 	l, err := listen.ListenNamedPipe(addr, pipeSDDL)
 	if err != nil {
-		return fmt.Errorf("pipe 监听错误：%w", err)
+		return fmt.Errorf("Pipe listen error: %w", err)
 	}
 	log.Printf("pipe Listen address: %s", l.Addr().String())
 

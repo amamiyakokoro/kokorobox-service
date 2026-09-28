@@ -25,7 +25,7 @@ func HardenEndpoint(network string, address string) error {
 		return nil
 	}
 	if err := security.RestrictPath(address, windows.NO_INHERITANCE); err != nil {
-		return fmt.Errorf("加固核心控制器 pipe 权限失败：%w", err)
+		return fmt.Errorf("Failed to secure core controller pipe permissions: %w", err)
 	}
 	return nil
 }
@@ -33,7 +33,7 @@ func HardenEndpoint(network string, address string) error {
 func randomToken(size int) (string, error) {
 	data := make([]byte, size)
 	if _, err := rand.Read(data); err != nil {
-		return "", fmt.Errorf("生成核心控制器 pipe token 失败：%w", err)
+		return "", fmt.Errorf("Failed to generate core controller pipe token: %w", err)
 	}
 	return hex.EncodeToString(data), nil
 }

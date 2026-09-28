@@ -61,7 +61,8 @@ func FromAcceptLanguage(value string) Locale {
 	return Default()
 }
 
-// Default returns the fallback language used for CLI output and logs.
+// Default returns the fallback language used for CLI output and HTTP responses.
+// Service logs always retain their English source messages.
 func Default() Locale {
 	localeMu.RLock()
 	defer localeMu.RUnlock()

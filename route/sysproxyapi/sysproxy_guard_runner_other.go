@@ -8,5 +8,5 @@ import (
 )
 
 func captureSysproxyGuardRunner(_ *http.Request) (sysproxyGuardRunner, error) {
-	return nil, fmt.Errorf("系统代理守护不支持当前平台")
+	return nil, fmt.Errorf("System proxy guard is not supported on this platform")
 }

@@ -27,17 +27,17 @@ func init() {
 func runReexec() error {
 	configFile := os.NewFile(3, "sandbox-config")
 	if configFile == nil {
-		return fmt.Errorf("核心沙盒 re-exec 配置描述符无效")
+		return fmt.Errorf("Invalid core sandbox re-exec configuration descriptor")
 	}
 	var reexec reexecConfig
 	decoder := json.NewDecoder(configFile)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&reexec); err != nil {
 		_ = configFile.Close()
-		return fmt.Errorf("读取核心沙盒 re-exec 配置失败：%w", err)
+		return fmt.Errorf("Failed to read core sandbox re-exec configuration: %w", err)
 	}
 	if err := configFile.Close(); err != nil {
-		return fmt.Errorf("关闭核心沙盒 re-exec 配置失败：%w", err)
+		return fmt.Errorf("Failed to close core sandbox re-exec configuration: %w", err)
 	}
 
 	unix.CloseOnExec(4)
@@ -46,10 +46,10 @@ func runReexec() error {
 	}
 	if err := syscall.Chroot(reexec.Root); err != nil {
 		_ = cleanupLinuxSandboxRoot(reexec.Root)
-		return fmt.Errorf("进入核心沙盒失败：%w", err)
+		return fmt.Errorf("Failed to enter core sandbox: %w", err)
 	}
 	if err := os.Chdir(reexec.Config.WorkingDir); err != nil {
-		return fmt.Errorf("切换核心工作目录失败 %s：%w", reexec.Config.WorkingDir, err)
+		return fmt.Errorf("Failed to change core working directory to %s: %w", reexec.Config.WorkingDir, err)
 	}
 
 	args := append([]string{reexec.Config.ExecutablePath}, reexec.Config.Args...)
@@ -57,7 +57,7 @@ func runReexec() error {
 }
 
 func reportReexecError(err error) {
-	message := fmt.Sprintf("核心沙盒 re-exec 失败：%v", err)
+	message := fmt.Sprintf("Core sandbox re-exec failed: %v", err)
 	statusFile := os.NewFile(4, "sandbox-status")
 	if statusFile != nil {
 		_, _ = statusFile.WriteString(message)

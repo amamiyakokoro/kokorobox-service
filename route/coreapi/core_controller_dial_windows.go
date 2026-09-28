@@ -11,7 +11,7 @@ import (
 
 func dialCoreController(ctx context.Context, network string, address string) (net.Conn, error) {
 	if network != "pipe" {
-		return nil, fmt.Errorf("windows 核心控制器仅支持 pipe")
+		return nil, fmt.Errorf("Windows core controller only supports named pipes")
 	}
 	return namedpipe.DialContext(ctx, address)
 }

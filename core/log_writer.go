@@ -107,12 +107,12 @@ func (w *boundedLogWriter) ensureOpenLocked() error {
 		return nil
 	}
 	if err := ensureCoreLogDir(filepath.Dir(w.path), w.access); err != nil {
-		return fmt.Errorf("创建核心日志目录失败：%w", err)
+		return fmt.Errorf("Failed to create core log directory: %w", err)
 	}
 
 	file, err := os.OpenFile(w.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return fmt.Errorf("打开核心日志文件失败：%w", err)
+		return fmt.Errorf("Failed to open core log file: %w", err)
 	}
 	if err := applyCoreLogFileAccess(w.path, w.access); err != nil {
 		_ = file.Close()
@@ -129,7 +129,7 @@ func (w *boundedLogWriter) enforceLimitLocked() error {
 
 	info, err := w.file.Stat()
 	if err != nil {
-		return fmt.Errorf("检查核心日志大小失败：%w", err)
+		return fmt.Errorf("Failed to check core log size: %w", err)
 	}
 	if info.Size() <= w.maxBytes {
 		return nil
@@ -139,7 +139,7 @@ func (w *boundedLogWriter) enforceLimitLocked() error {
 
 	if err := w.file.Close(); err != nil {
 		w.file = nil
-		return fmt.Errorf("关闭核心日志文件失败：%w", err)
+		return fmt.Errorf("Failed to close core log file: %w", err)
 	}
 	w.file = nil
 
@@ -151,7 +151,7 @@ func (w *boundedLogWriter) enforceLimitLocked() error {
 
 	if err := os.WriteFile(w.path, content, 0o600); err != nil {
 		_ = w.reopenLocked()
-		return fmt.Errorf("裁剪核心日志文件失败：%w", err)
+		return fmt.Errorf("Failed to truncate core log file: %w", err)
 	}
 	if err := applyCoreLogFileAccess(w.path, w.access); err != nil {
 		_ = w.reopenLocked()
@@ -165,14 +165,14 @@ func readLogTail(path string, fileSize int64, targetBytes int64) ([]byte, error)
 	if fileSize <= targetBytes {
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("读取核心日志文件失败：%w", err)
+			return nil, fmt.Errorf("Failed to read core log file: %w", err)
 		}
 		return content, nil
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("打开核心日志文件失败：%w", err)
+		return nil, fmt.Errorf("Failed to open core log file: %w", err)
 	}
 	defer file.Close()
 
@@ -180,7 +180,7 @@ func readLogTail(path string, fileSize int64, targetBytes int64) ([]byte, error)
 	content := make([]byte, targetBytes)
 	n, err := file.ReadAt(content, offset)
 	if err != nil && err != io.EOF {
-		return nil, fmt.Errorf("读取核心日志文件尾部失败：%w", err)
+		return nil, fmt.Errorf("Failed to read core log file tail: %w", err)
 	}
 	content = content[:n]
 
@@ -194,7 +194,7 @@ func readLogTail(path string, fileSize int64, targetBytes int64) ([]byte, error)
 func (w *boundedLogWriter) reopenLocked() error {
 	file, err := os.OpenFile(w.path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return fmt.Errorf("重新打开核心日志文件失败：%w", err)
+		return fmt.Errorf("Failed to reopen core log file: %w", err)
 	}
 	if err := applyCoreLogFileAccess(w.path, w.access); err != nil {
 		_ = file.Close()
@@ -220,7 +220,7 @@ func (w *boundedLogWriter) reportErrorLocked(err error) {
 		return
 	}
 	w.lastError = message
-	log.Printf("写入核心日志失败: %v", err)
+	log.Printf("Failed to write core log: %v", err)
 }
 
 func coreLogSettingsFromProfile(profile LaunchProfile, access fileAccess) coreLogSettings {

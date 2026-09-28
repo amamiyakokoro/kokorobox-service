@@ -34,7 +34,7 @@ func New(program kservice.Interface, executablePath string) (kservice.Service, e
 func (c Controller) Status() (Status, error) {
 	status, err := queryServiceStatus()
 	if err != nil {
-		return StatusUnknown, fmt.Errorf("Failed to query service status：%w", err)
+		return StatusUnknown, fmt.Errorf("Failed to query service status: %w", err)
 	}
 
 	switch status {
@@ -62,7 +62,7 @@ func (c Controller) Restart() error {
 func newControlService() (kservice.Service, error) {
 	svc, err := New(&noopProgram{}, "")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create service：%w", err)
+		return nil, fmt.Errorf("Failed to create service: %w", err)
 	}
 	return svc, nil
 }

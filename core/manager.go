@@ -368,7 +368,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	command, err := newCoreLauncher(launch).Command(launch)
 	if err != nil {
 		if closeErr := logWriter.Close(); closeErr != nil {
-			log.Printf("关闭核心日志文件失败: %v", closeErr)
+			log.Printf("Failed to close core log file: %v", closeErr)
 		}
 		closeProcessController(controller)
 		launch.cleanupNow()
@@ -381,7 +381,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 	launch.addCleanup(command.cleanupNow)
 	launch.addCleanup(func() {
 		if err := logWriter.Close(); err != nil {
-			log.Printf("关闭核心日志文件失败: %v", err)
+			log.Printf("Failed to close core log file: %v", err)
 		}
 	})
 	logEventWatcher := newCoreLogEventWatcher(cm)
@@ -397,7 +397,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
-		startErr := fmt.Errorf("启动核心进程失败：%w", err)
+		startErr := fmt.Errorf("Failed to start core process: %w", err)
 		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", startErr)
 		return startErr
 	}
@@ -410,13 +410,13 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		cm.monitoring.Store(false)
 		cm.signalStopLocked()
 		cm.isRunning.Store(false)
-		attachErr := fmt.Errorf("附加核心进程控制失败：%w", err)
+		attachErr := fmt.Errorf("Failed to attach core process controller: %w", err)
 		cm.emitCoreEvent(CoreEventFailed, "Failed to start core", attachErr)
 		return attachErr
 	}
 
 	if err := setProcessPriority(pid, launch.cpuPriority); err != nil {
-		log.Printf("设置核心进程优先级失败: %v", err)
+		log.Printf("Failed to set core process priority: %v", err)
 	}
 
 	cm.cmd = cmd
@@ -447,7 +447,7 @@ func (cm *CoreManager) startProcessLocked(profile *LaunchProfile, options launch
 		return err
 	}
 	if cleanup, err := startTrafficMonitorProxy(launch, cm.trafficMonitorPipeSDDL); err != nil {
-		log.Printf("启动 TrafficMonitor 兼容 pipe 失败: %v", err)
+		log.Printf("Failed to start TrafficMonitor compatibility pipe: %v", err)
 	} else {
 		launch.addCleanup(cleanup)
 	}
@@ -496,7 +496,7 @@ func (cm *CoreManager) RestartCoreWithProfile(profile *LaunchProfile, options ..
 
 	cm.emitCoreEvent(CoreEventRestarting, "Core is restarting", nil)
 	if err := cm.stopCoreLocked(); err != nil {
-		log.Printf("停止进程时出错: %v", err)
+		log.Printf("Failed to stop process: %v", err)
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -570,7 +570,7 @@ func closeProcessController(controller processController) {
 		return
 	}
 	if err := controller.Close(); err != nil {
-		log.Printf("关闭核心进程控制器失败: %v", err)
+		log.Printf("Failed to close core process controller: %v", err)
 	}
 }
 
@@ -595,7 +595,7 @@ func (cm *CoreManager) monitorProcess(cmd *exec.Cmd, errBuffer *boundedOutputBuf
 	cm.mutex.Unlock()
 
 	if err != nil {
-		log.Printf("Core process exited unexpectedly: %v\n错误输出: %s", err, errBuffer.String())
+		log.Printf("Core process exited unexpectedly: %v\nstderr: %s", err, errBuffer.String())
 	} else {
 		log.Printf("Core process exited (PID: %d)", cmd.Process.Pid)
 	}
@@ -629,10 +629,10 @@ func (cm *CoreManager) handleStartupNotification(launch *launchSession) {
 	cm.mutex.Unlock()
 
 	if err := security.SecureBinary(launch.executablePath); err != nil {
-		log.Printf("核心启动通知后加固核心文件失败: %v", err)
+		log.Printf("Failed to secure core file after startup notification: %v", err)
 	}
 	if err := hardenLaunchControllerEndpoint(launch); err != nil {
-		log.Printf("核心启动通知后加固核心控制器 IPC 失败: %v", err)
+		log.Printf("Failed to secure core controller IPC after startup notification: %v", err)
 	}
 
 	newPID := oldPID
@@ -656,11 +656,11 @@ func (cm *CoreManager) handleStartupNotification(launch *launchSession) {
 	cm.mutex.Unlock()
 
 	if newPID != oldPID {
-		log.Printf("核心进程已通过启动通知重新接管 (PID: %d -> %d)", oldPID, newPID)
+		log.Printf("Core process taken over after startup notification (PID: %d -> %d)", oldPID, newPID)
 		cm.publishCoreEvent(cm.newCoreEvent(CoreEventTakeover, "Core process taken over again", nil, newPID, oldPID))
 		return
 	}
-	cm.publishCoreEvent(cm.newCoreEvent(CoreEventReady, "核心已重新就绪", nil, newPID, 0))
+	cm.publishCoreEvent(cm.newCoreEvent(CoreEventReady, "Core is ready again", nil, newPID, 0))
 }
 
 func (cm *CoreManager) handleProcessExit() {
@@ -699,12 +699,12 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 		newPID, ok := findManagedCorePID(controller, oldPID, launch)
 		if ok {
 			if err := security.SecureBinary(launch.executablePath); err != nil {
-				log.Printf("重新接管前加固核心文件失败: %v", err)
+				log.Printf("Failed to secure core file before takeover: %v", err)
 				_ = controller.Stop(newPID)
 				return false
 			}
 			if err := hardenLaunchControllerEndpoint(launch); err != nil {
-				log.Printf("重新接管前加固核心控制器 IPC 失败: %v", err)
+				log.Printf("Failed to secure core controller IPC before takeover: %v", err)
 				_ = controller.Stop(newPID)
 				return false
 			}
@@ -733,7 +733,7 @@ func (cm *CoreManager) takeoverRestartedProcess() bool {
 func findManagedCorePID(controller processController, oldPID int32, launch *launchSession) (int32, bool) {
 	pids, err := controller.PIDs()
 	if err != nil {
-		log.Printf("查询核心进程组失败: %v", err)
+		log.Printf("Failed to query core process group: %v", err)
 		return 0, false
 	}
 
@@ -827,7 +827,7 @@ func (cm *CoreManager) monitorPID(stopChan <-chan struct{}) {
 
 			exists, err := process.PidExists(pid)
 			if err != nil {
-				log.Printf("检查核心进程失败: %v", err)
+				log.Printf("Failed to check core process: %v", err)
 				continue
 			}
 			if !exists && cm.isRunning.Load() {
@@ -845,7 +845,7 @@ func (cm *CoreManager) waitForStartup(launch *launchSession, errBuffer *boundedO
 	defer cancel()
 
 	if launch.waitReady == nil {
-		return fmt.Errorf("核心启动通知未初始化")
+		return fmt.Errorf("Core startup notifications are not initialized")
 	}
 
 	ready := make(chan error, 1)
@@ -857,7 +857,7 @@ func (cm *CoreManager) waitForStartup(launch *launchSession, errBuffer *boundedO
 		select {
 		case err := <-ready:
 			if err != nil {
-				return fmt.Errorf("等待核心 post-up 通知失败：%w", err)
+				return fmt.Errorf("Failed to wait for core post-up notification: %w", err)
 			}
 			graceTimer := time.NewTimer(startupReadyGracePeriod)
 			defer graceTimer.Stop()
@@ -869,13 +869,13 @@ func (cm *CoreManager) waitForStartup(launch *launchSession, errBuffer *boundedO
 				return nil
 			case err := <-processDone:
 				if err != nil {
-					return fmt.Errorf("核心进程启动后立即退出：%w，错误输出: %s", err, errBuffer.String())
+					return fmt.Errorf("Core process exited immediately after startup: %w, stderr: %s", err, errBuffer.String())
 				}
-				return fmt.Errorf("核心进程启动后立即退出")
+				return fmt.Errorf("Core process exited immediately after startup")
 			case <-graceTimer.C:
 				return nil
 			case <-ctx.Done():
-				return fmt.Errorf("启动核心进程超时")
+				return fmt.Errorf("Timed out while starting core process")
 			}
 		case err := <-startupFatal:
 			if err != nil {
@@ -883,11 +883,11 @@ func (cm *CoreManager) waitForStartup(launch *launchSession, errBuffer *boundedO
 			}
 		case err := <-processDone:
 			if err != nil {
-				return fmt.Errorf("核心进程启动前退出：%w，错误输出: %s", err, errBuffer.String())
+				return fmt.Errorf("Core process exited before startup: %w, stderr: %s", err, errBuffer.String())
 			}
-			return fmt.Errorf("核心进程启动前退出")
+			return fmt.Errorf("Core process exited before startup")
 		case <-ctx.Done():
-			return fmt.Errorf("启动核心进程超时")
+			return fmt.Errorf("Timed out while starting core process")
 		}
 	}
 }
@@ -918,12 +918,12 @@ func startupFatalLineError(line string) error {
 	case strings.Contains(line, "External controller pipe listen error"),
 		strings.Contains(line, "External controller unix listen error"),
 		strings.Contains(line, "External controller listen error"):
-		return fmt.Errorf("控制器监听失败：%s", strings.TrimSpace(line))
+		return fmt.Errorf("Controller listen failed: %s", strings.TrimSpace(line))
 	case strings.Contains(line, "Start TUN listening error"):
-		return fmt.Errorf("虚拟网卡启动失败：%s", strings.TrimSpace(line))
+		return fmt.Errorf("Virtual network adapter failed to start: %s", strings.TrimSpace(line))
 	case strings.Contains(lower, "start ") &&
 		(strings.Contains(lower, " server error") || strings.Contains(lower, " listening error")):
-		return fmt.Errorf("核心监听器启动失败：%s", strings.TrimSpace(line))
+		return fmt.Errorf("Core listener failed to start: %s", strings.TrimSpace(line))
 	default:
 		return nil
 	}
@@ -940,7 +940,7 @@ func (cm *CoreManager) IsHealthy() bool {
 	}
 
 	if info.Memory > 1024*1024*1024 {
-		log.Printf("警告: 核心进程内存使用过高 (%s)", info.MemoryFormat)
+		log.Printf("Warning: core process memory usage is too high (%s)", info.MemoryFormat)
 	}
 
 	return true
@@ -959,7 +959,7 @@ func (cm *CoreManager) GetProcessInfo() (*ProcessInfo, error) {
 
 	proc, err := process.NewProcess(pid)
 	if err != nil {
-		return nil, fmt.Errorf("获取进程信息失败：%w", err)
+		return nil, fmt.Errorf("Failed to get process information: %w", err)
 	}
 
 	info := &ProcessInfo{
@@ -1023,7 +1023,7 @@ func formatUptime(d time.Duration) string {
 func extractFatalError(output string) error {
 	if _, after, ok := strings.Cut(output, "level=fatal msg="); ok {
 		msg := strings.TrimSpace(after)
-		return fmt.Errorf("启动核心进程失败: %s", msg)
+		return fmt.Errorf("Failed to start core process: %s", msg)
 	}
-	return fmt.Errorf("启动核心进程失败：发现致命错误")
+	return fmt.Errorf("Failed to start core process: fatal error detected")
 }

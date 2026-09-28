@@ -10,7 +10,7 @@ import (
 
 func dialCoreController(ctx context.Context, network string, address string) (net.Conn, error) {
 	if network != "unix" {
-		return nil, fmt.Errorf("unix 核心控制器仅支持 unix")
+		return nil, fmt.Errorf("Unix core controller only supports Unix sockets")
 	}
 
 	var dialer net.Dialer

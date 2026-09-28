@@ -15,7 +15,7 @@ func createNativeStartupHook(token string) (*coreStartupHook, error) {
 	pipePath := `\\.\pipe\kokorobox\core-notify-` + token
 	listener, err := listen.ListenNamedPipe(pipePath, currentProcessPipeSDDL())
 	if err != nil {
-		return nil, fmt.Errorf("创建核心启动通知管道失败：%w", err)
+		return nil, fmt.Errorf("Failed to create core startup notification pipe: %w", err)
 	}
 	postUpCommand, executable, err := startupNotifyCommand()
 	if err != nil {
@@ -39,7 +39,7 @@ func createNativeStartupHook(token string) (*coreStartupHook, error) {
 
 func sendNativeStartupNotification(network string, address string, token string) error {
 	if network != "pipe" {
-		return fmt.Errorf("windows 启动通知仅支持 pipe")
+		return fmt.Errorf("Windows startup notifications only support named pipes")
 	}
 	conn, err := namedpipe.DialTimeout(address, 5*time.Second)
 	if err != nil {

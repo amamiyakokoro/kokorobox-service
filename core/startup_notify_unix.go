@@ -22,23 +22,23 @@ func createNativeStartupHook(token string) (*coreStartupHook, error) {
 
 	socketDir, err := os.MkdirTemp("", fmt.Sprintf("%s%d-*", startupNotifyDirPrefix, os.Getpid()))
 	if err != nil {
-		return nil, fmt.Errorf("创建核心启动通知目录失败：%w", err)
+		return nil, fmt.Errorf("Failed to create core startup notification directory: %w", err)
 	}
 	if err := os.Chmod(socketDir, 0o700); err != nil {
 		_ = os.RemoveAll(socketDir)
-		return nil, fmt.Errorf("设置核心启动通知目录权限失败：%w", err)
+		return nil, fmt.Errorf("Failed to set core startup notification directory permissions: %w", err)
 	}
 
 	socketPath := filepath.Join(socketDir, token+".sock")
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
 		_ = os.RemoveAll(socketDir)
-		return nil, fmt.Errorf("创建核心启动通知 UDS 失败：%w", err)
+		return nil, fmt.Errorf("Failed to create core startup notification Unix socket: %w", err)
 	}
 	if err := os.Chmod(socketPath, 0o600); err != nil {
 		_ = listener.Close()
 		_ = os.RemoveAll(socketDir)
-		return nil, fmt.Errorf("设置核心启动通知 UDS 权限失败：%w", err)
+		return nil, fmt.Errorf("Failed to set core startup notification Unix socket permissions: %w", err)
 	}
 	postUpCommand, err := startupNotifyCommand()
 	if err != nil {
@@ -63,7 +63,7 @@ func createNativeStartupHook(token string) (*coreStartupHook, error) {
 func cleanupStaleStartupNotifyDirs() {
 	dirs, err := filepath.Glob(filepath.Join(os.TempDir(), startupNotifyDirPrefix+"*"))
 	if err != nil {
-		log.Printf("查找残留核心启动通知目录失败：%v", err)
+		log.Printf("Failed to find stale core startup notification directories: %v", err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func cleanupStaleStartupNotifyDirs() {
 			continue
 		}
 		if err := removeStartupNotifyDir(dir); err != nil {
-			log.Printf("清理残留核心启动通知目录失败：%v", err)
+			log.Printf("Failed to clean up stale core startup notification directory: %v", err)
 		}
 	}
 }
@@ -102,7 +102,7 @@ func removeStartupNotifyDir(dir string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("读取目录 %s 失败：%w", dir, err)
+		return fmt.Errorf("Failed to read directory %s: %w", dir, err)
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
@@ -110,14 +110,14 @@ func removeStartupNotifyDir(dir string) error {
 		return nil
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return fmt.Errorf("删除目录 %s 失败：%w", dir, err)
+		return fmt.Errorf("Failed to remove directory %s: %w", dir, err)
 	}
 	return nil
 }
 
 func sendNativeStartupNotification(network string, address string, token string) error {
 	if network != "unix" {
-		return fmt.Errorf("unix 启动通知仅支持 unix")
+		return fmt.Errorf("Unix startup notifications only support Unix sockets")
 	}
 	conn, err := net.DialTimeout("unix", address, 5*time.Second)
 	if err != nil {

@@ -160,7 +160,7 @@ func (p *windowsNativeProcess) readEvents(reader io.Reader) {
 		var event routerEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			recordDiagnostic(fmt.Sprintf("Invalid process router output: %v", err))
-			log.Printf("忽略无效的应用分流输出: %v", err)
+			log.Printf("Ignoring invalid process router output: %v", err)
 			continue
 		}
 		p.events <- event
@@ -176,7 +176,7 @@ func (p *windowsNativeProcess) readErrors(reader io.Reader) {
 			line = line[:1000]
 		}
 		recordDiagnostic(line)
-		log.Printf("应用分流原生组件: %s", line)
+		log.Printf("Native process router: %s", line)
 	}
 }
 

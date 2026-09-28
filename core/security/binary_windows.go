@@ -121,10 +121,10 @@ func SecureBinary(corePath string) error {
 	}
 
 	if err := RestrictPath(filepath.Dir(corePath), windows.SUB_CONTAINERS_AND_OBJECTS_INHERIT); err != nil {
-		return fmt.Errorf("加固核心目录权限失败：%w", err)
+		return fmt.Errorf("Failed to secure core directory permissions: %w", err)
 	}
 	if err := RestrictPath(corePath, windows.NO_INHERITANCE); err != nil {
-		return fmt.Errorf("加固核心文件权限失败：%w", err)
+		return fmt.Errorf("Failed to secure core file permissions: %w", err)
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func CurrentProcessSID() (*windows.SID, error) {
 	token := windows.GetCurrentProcessToken()
 	user, err := token.GetTokenUser()
 	if err != nil {
-		return nil, fmt.Errorf("读取当前进程 SID 失败：%w", err)
+		return nil, fmt.Errorf("Failed to read current process SID: %w", err)
 	}
 
 	return user.User.Sid, nil

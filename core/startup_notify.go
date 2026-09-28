@@ -32,7 +32,7 @@ func init() {
 		identity.Environment(startupNotifyTokenEnv, legacyStartupNotifyTokenEnv),
 	)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "核心启动通知失败：%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Core startup notification failed: %v\n", err)
 		os.Exit(125)
 	}
 	os.Exit(0)
@@ -56,7 +56,7 @@ func readStartupNotification(conn net.Conn, token string) error {
 		return err
 	}
 	if strings.TrimSpace(string(data)) != token {
-		return fmt.Errorf("核心启动通知 token 不匹配")
+		return fmt.Errorf("Core startup notification token does not match")
 	}
 	return nil
 }

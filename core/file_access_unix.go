@@ -16,7 +16,7 @@ func ensureCoreLogDir(dir string, access fileAccess) error {
 	}
 	if os.Geteuid() == 0 {
 		if err := os.Chown(dir, -1, access.groupID); err != nil {
-			return fmt.Errorf("设置核心日志目录用户组失败：%w", err)
+			return fmt.Errorf("Failed to set core log directory group: %w", err)
 		}
 	}
 
@@ -26,7 +26,7 @@ func ensureCoreLogDir(dir string, access fileAccess) error {
 	}
 	mode := info.Mode() | 0o070 | os.ModeSetgid
 	if err := os.Chmod(dir, mode); err != nil {
-		return fmt.Errorf("设置核心日志目录权限失败：%w", err)
+		return fmt.Errorf("Failed to set core log directory permissions: %w", err)
 	}
 	return nil
 }
@@ -37,7 +37,7 @@ func applyCoreLogFileAccess(path string, access fileAccess) error {
 	}
 	if os.Geteuid() == 0 {
 		if err := os.Chown(path, -1, access.groupID); err != nil {
-			return fmt.Errorf("设置核心日志文件用户组失败：%w", err)
+			return fmt.Errorf("Failed to set core log file group: %w", err)
 		}
 	}
 
@@ -47,7 +47,7 @@ func applyCoreLogFileAccess(path string, access fileAccess) error {
 	}
 	mode := info.Mode() | 0o060
 	if err := os.Chmod(path, mode); err != nil {
-		return fmt.Errorf("设置核心日志文件权限失败：%w", err)
+		return fmt.Errorf("Failed to set core log file permissions: %w", err)
 	}
 	return nil
 }

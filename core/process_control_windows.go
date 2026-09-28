@@ -61,7 +61,7 @@ func setProcessPriority(pid int32, priority string) error {
 func (c *windowsProcessController) Attach(pid int32) error {
 	job, err := windows.CreateJobObject(nil, nil)
 	if err != nil {
-		return fmt.Errorf("创建 Job Object 失败：%w", err)
+		return fmt.Errorf("Failed to create job object: %w", err)
 	}
 
 	info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{}
@@ -73,7 +73,7 @@ func (c *windowsProcessController) Attach(pid int32) error {
 		uint32(unsafe.Sizeof(info)),
 	); err != nil {
 		windows.CloseHandle(job)
-		return fmt.Errorf("配置 Job Object 失败：%w", err)
+		return fmt.Errorf("Failed to configure job object: %w", err)
 	}
 
 	processHandle, err := windows.OpenProcess(
@@ -83,13 +83,13 @@ func (c *windowsProcessController) Attach(pid int32) error {
 	)
 	if err != nil {
 		windows.CloseHandle(job)
-		return fmt.Errorf("打开核心进程句柄失败：%w", err)
+		return fmt.Errorf("Failed to open core process handle: %w", err)
 	}
 	defer windows.CloseHandle(processHandle)
 
 	if err := windows.AssignProcessToJobObject(job, processHandle); err != nil {
 		windows.CloseHandle(job)
-		return fmt.Errorf("绑定核心进程到 Job Object 失败：%w", err)
+		return fmt.Errorf("Failed to assign core process to job object: %w", err)
 	}
 
 	c.job = job
@@ -133,7 +133,7 @@ func (c *windowsProcessController) PIDs() ([]int32, error) {
 		return pids, nil
 	}
 
-	return nil, fmt.Errorf("job object 进程列表过长")
+	return nil, fmt.Errorf("Job object process list is too long")
 }
 
 func (c *windowsProcessController) Stop(pid int32) error {
@@ -150,7 +150,7 @@ func (c *windowsProcessController) Stop(pid int32) error {
 	cmd := exec.Command("taskkill", "/PID", fmt.Sprintf("%d", pid), "/T", "/F")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("终止核心进程失败：%w, output: %s", err, string(output))
+		return fmt.Errorf("Failed to terminate core process: %w, output: %s", err, string(output))
 	}
 
 	return closeErr

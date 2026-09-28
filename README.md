@@ -44,6 +44,10 @@ go build -o kokorobox-service .
 
 ## Documentation
 
+Service log messages and service-owned diagnostic errors use English regardless
+of `--locale` or `KOKOROBOX_LOCALE`. CLI help and HTTP responses retain their
+supported display languages. Paths, process names, and native output are preserved.
+
 - [Local API, request bodies, and authentication](docs/API.md)
 
 ## License

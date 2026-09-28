@@ -38,7 +38,7 @@ func (linuxSandboxLauncher) Command(launch *launchSession) (*coreCommand, error)
 	}
 	command := newCoreCommand(sandboxCommand.Cmd, func() {
 		if err := sandboxCommand.Cleanup(); err != nil {
-			log.Printf("清理核心沙盒失败：%v", err)
+			log.Printf("Failed to clean up core sandbox: %v", err)
 		}
 	})
 	command.afterStart = sandboxCommand.AwaitExec

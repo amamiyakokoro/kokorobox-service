@@ -20,7 +20,7 @@ var (
 func Router() http.Handler {
 	restoreOnce.Do(func() {
 		if err := manager.Restore(); err != nil && !errors.Is(err, processrouter.ErrUnsupported) {
-			log.Printf("恢复应用分流服务失败: %v", err)
+			log.Printf("Failed to restore process router service: %v", err)
 		}
 	})
 	r := chi.NewRouter()

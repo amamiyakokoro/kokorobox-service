@@ -41,17 +41,17 @@ func runProbe() error {
 
 	if err := command.Cmd.Start(); err != nil {
 		_ = command.Cleanup()
-		return fmt.Errorf("chroot 或 namespace 探测失败：%w", err)
+		return fmt.Errorf("chroot or namespace probe failed: %w", err)
 	}
 	if err := command.AwaitExec(); err != nil {
 		_ = command.Cmd.Process.Kill()
 		_ = command.Cmd.Wait()
 		_ = command.Cleanup()
-		return fmt.Errorf("沙盒 re-exec 探测失败：%w", err)
+		return fmt.Errorf("Sandbox re-exec probe failed: %w", err)
 	}
 	if err := command.Cmd.Wait(); err != nil {
 		_ = command.Cleanup()
-		return fmt.Errorf("chroot 或 namespace 探测失败：%w", err)
+		return fmt.Errorf("chroot or namespace probe failed: %w", err)
 	}
 	return command.Cleanup()
 }

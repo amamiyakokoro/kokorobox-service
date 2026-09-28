@@ -19,6 +19,6 @@ func applySysproxyGuardSettings(mode sysproxyGuardMode, opts *sysproxy.Options) 
 	case sysproxyGuardModePAC:
 		return sysproxy.SetPac(opts)
 	default:
-		return fmt.Errorf("未知系统代理守护模式：%s", mode)
+		return fmt.Errorf("Unknown system proxy guard mode: %s", mode)
 	}
 }

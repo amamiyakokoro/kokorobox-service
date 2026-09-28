@@ -47,7 +47,7 @@ func (c *coreCommand) start() (*exec.Cmd, error) {
 		fallback, fallbackErr := c.startFallback(firstErr)
 		c.startFallback = nil
 		if fallbackErr != nil {
-			return nil, fmt.Errorf("沙盒启动失败：%v；准备直接启动失败：%w", firstErr, fallbackErr)
+			return nil, fmt.Errorf("Sandbox launch failed: %v; failed to prepare direct launch: %w", firstErr, fallbackErr)
 		}
 
 		copyCommandIO(fallback.cmd, firstCmd)
@@ -56,7 +56,7 @@ func (c *coreCommand) start() (*exec.Cmd, error) {
 		c.afterStart = fallback.afterStart
 		if err := c.startAttempt(); err != nil {
 			c.cleanupNow()
-			return nil, fmt.Errorf("沙盒启动失败：%v；直接启动失败：%w", firstErr, err)
+			return nil, fmt.Errorf("Sandbox launch failed: %v; direct launch failed: %w", firstErr, err)
 		}
 		return c.cmd, nil
 	}

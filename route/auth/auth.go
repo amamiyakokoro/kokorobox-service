@@ -63,20 +63,20 @@ func InitKeyManager(keyDir string) error {
 	km.principalPath = filepath.Join(keyDir, "authorized_principal.json")
 
 	if err := os.MkdirAll(keyDir, 0o755); err != nil {
-		return fmt.Errorf("创建密钥目录失败： %w", err)
+		return fmt.Errorf("Failed to create key directory: %w", err)
 	}
 
 	var errs []string
 	if err := km.loadPublicKeys(); err != nil {
-		errs = append(errs, fmt.Sprintf("加载公钥失败： %v", err))
+		errs = append(errs, fmt.Sprintf("Failed to load public key: %v", err))
 	}
 
 	if err := km.loadAuthorizedPrincipal(); err != nil {
-		errs = append(errs, fmt.Sprintf("加载授权主体失败： %v", err))
+		errs = append(errs, fmt.Sprintf("Failed to load authorized principal: %v", err))
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("%s", strings.Join(errs, "；"))
+		return fmt.Errorf("%s", strings.Join(errs, "; "))
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func validateKeyID(keyID string) (string, error) {
 func computeKeyID(pubKeyBase64 string) (string, error) {
 	keyBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(pubKeyBase64))
 	if err != nil {
-		return "", fmt.Errorf("Failed to decode public key Base64:  %w", err)
+		return "", fmt.Errorf("Failed to decode public key Base64: %w", err)
 	}
 
 	sum := sha256.Sum256(keyBytes)
@@ -123,12 +123,12 @@ func parsePublicKey(pubKeyBase64 string) (string, ed25519.PublicKey, error) {
 
 	pubKeyBytes, err := base64.StdEncoding.DecodeString(normalized)
 	if err != nil {
-		return "", nil, fmt.Errorf("Failed to decode public key Base64:  %w", err)
+		return "", nil, fmt.Errorf("Failed to decode public key Base64: %w", err)
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 	if err != nil {
-		return "", nil, fmt.Errorf("Failed to parse public key:  %w", err)
+		return "", nil, fmt.Errorf("Failed to parse public key: %w", err)
 	}
 
 	edPub, ok := pub.(ed25519.PublicKey)
@@ -217,11 +217,11 @@ func (km *KeyManager) savePublicKeysLocked() error {
 		Previous: cloneStoredPublicKey(km.previousKey),
 	}, "", "  ")
 	if err != nil {
-		return fmt.Errorf("序列化公钥失败： %w", err)
+		return fmt.Errorf("Failed to serialize public key: %w", err)
 	}
 
 	if err := os.WriteFile(km.keyRingPath, data, 0o600); err != nil {
-		return fmt.Errorf("保存公钥失败： %w", err)
+		return fmt.Errorf("Failed to save public key: %w", err)
 	}
 
 	return nil
@@ -231,18 +231,18 @@ func (km *KeyManager) loadLegacyPublicKeyLocked() (*storedPublicKey, error) {
 	pubKeyPEM, err := os.ReadFile(km.legacyKeyPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("公钥文件不存在（未初始化）")
+			return nil, fmt.Errorf("Public key file does not exist (service is not initialized)")
 		}
-		return nil, fmt.Errorf("读取公钥文件失败： %w", err)
+		return nil, fmt.Errorf("Failed to read public key file: %w", err)
 	}
 
 	block, _ := pem.Decode(pubKeyPEM)
 	if block == nil {
-		return nil, fmt.Errorf("无效的 PEM 格式")
+		return nil, fmt.Errorf("Invalid PEM format")
 	}
 
 	if _, err := x509.ParsePKIXPublicKey(block.Bytes); err != nil {
-		return nil, fmt.Errorf("Failed to parse public key:  %w", err)
+		return nil, fmt.Errorf("Failed to parse public key: %w", err)
 	}
 
 	publicKey := base64.StdEncoding.EncodeToString(block.Bytes)
@@ -266,7 +266,7 @@ func (km *KeyManager) loadPublicKeys() error {
 	case err == nil:
 		var ring keyRing
 		if err := json.Unmarshal(data, &ring); err != nil {
-			return fmt.Errorf("Failed to parse public key:  %w", err)
+			return fmt.Errorf("Failed to parse public key: %w", err)
 		}
 
 		currentKey, err := normalizeStoredPublicKey(ring.Current)
@@ -274,7 +274,7 @@ func (km *KeyManager) loadPublicKeys() error {
 			return err
 		}
 		if currentKey == nil {
-			return fmt.Errorf("当前公钥不存在（未初始化）")
+			return fmt.Errorf("Current public key does not exist (service is not initialized)")
 		}
 
 		previousKey, err := normalizeStoredPublicKey(ring.Previous)
@@ -291,7 +291,7 @@ func (km *KeyManager) loadPublicKeys() error {
 
 		return km.refreshPublicKeysLocked()
 	case !os.IsNotExist(err):
-		return fmt.Errorf("读取公钥文件失败： %w", err)
+		return fmt.Errorf("Failed to read public key file: %w", err)
 	}
 
 	legacyKey, err := km.loadLegacyPublicKeyLocked()
@@ -457,7 +457,7 @@ func validateAuthorizedPrincipal(principal *AuthorizedPrincipal) error {
 			return fmt.Errorf("UID cannot be empty")
 		}
 		if _, err := strconv.ParseUint(principal.Value, 10, 32); err != nil {
-			return fmt.Errorf("UID 格式无效： %w", err)
+			return fmt.Errorf("Invalid UID format: %w", err)
 		}
 	case "sid":
 		if principal.Value == "" {
@@ -467,7 +467,7 @@ func validateAuthorizedPrincipal(principal *AuthorizedPrincipal) error {
 			return fmt.Errorf("Invalid SID format")
 		}
 	default:
-		return fmt.Errorf("不支持的授权主体类型: %s", principal.Type)
+		return fmt.Errorf("Unsupported authorized principal type: %s", principal.Type)
 	}
 
 	return nil
@@ -495,11 +495,11 @@ func (km *KeyManager) setAuthorizedPrincipal(principal AuthorizedPrincipal) (boo
 
 	data, err := json.MarshalIndent(principal, "", "  ")
 	if err != nil {
-		return false, fmt.Errorf("序列化授权主体失败： %w", err)
+		return false, fmt.Errorf("Failed to serialize authorized principal: %w", err)
 	}
 
 	if err := os.WriteFile(km.principalPath, data, 0o600); err != nil {
-		return false, fmt.Errorf("保存授权主体失败： %w", err)
+		return false, fmt.Errorf("Failed to save authorized principal: %w", err)
 	}
 
 	km.authorizedPrincipal = new(principal)
@@ -526,12 +526,12 @@ func (km *KeyManager) loadAuthorizedPrincipal() error {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("Authorized principal file does not exist (requestor identity is not bound)")
 		}
-		return fmt.Errorf("读取授权主体文件失败： %w", err)
+		return fmt.Errorf("Failed to read authorized principal file: %w", err)
 	}
 
 	var principal AuthorizedPrincipal
 	if err := json.Unmarshal(data, &principal); err != nil {
-		return fmt.Errorf("解析授权主体失败： %w", err)
+		return fmt.Errorf("Failed to parse authorized principal: %w", err)
 	}
 
 	if err := validateAuthorizedPrincipal(&principal); err != nil {
@@ -558,7 +558,7 @@ func (km *KeyManager) VerifySignature(keyID string, message string, signature st
 
 	sig, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
-		return fmt.Errorf("Failed to decode signature:  %w", err)
+		return fmt.Errorf("Failed to decode signature: %w", err)
 	}
 
 	if !ed25519.Verify(publicKey, []byte(message), sig) {

@@ -90,11 +90,11 @@ func serviceErrorState(err error) string {
 func serviceStatusMessage(state string) string {
 	switch state {
 	case "running":
-		return i18n.DefaultText("Service status: running")
+		return "Service status: running"
 	case "stopped":
-		return i18n.DefaultText("Service status: stopped")
+		return "Service status: stopped"
 	default:
-		return i18n.DefaultText("Service status: unknown")
+		return "Service status: unknown"
 	}
 }
 

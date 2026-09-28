@@ -61,7 +61,7 @@ func NewCommand(config Config) (*Command, error) {
 	statusReader, statusWriter, err := os.Pipe()
 	if err != nil {
 		_ = configFile.Close()
-		return fail(fmt.Errorf("创建核心沙盒状态管道失败：%w", err))
+		return fail(fmt.Errorf("Failed to create core sandbox status pipe: %w", err))
 	}
 
 	serviceExecutable, err := os.Executable()
@@ -93,12 +93,12 @@ func NewCommand(config Config) (*Command, error) {
 
 func (c *Command) AwaitExec() error {
 	if c == nil {
-		return fmt.Errorf("核心沙盒命令为空")
+		return fmt.Errorf("Core sandbox command is empty")
 	}
 	c.awaitOnce.Do(func() {
 		c.closeParentWriters()
 		if c.statusReader == nil {
-			c.awaitErr = fmt.Errorf("核心沙盒状态管道不可用")
+			c.awaitErr = fmt.Errorf("Core sandbox status pipe is unavailable")
 			return
 		}
 
@@ -120,7 +120,7 @@ func (c *Command) AwaitExec() error {
 			_ = reader.Close()
 			c.statusReader = nil
 			if status.err != nil {
-				c.awaitErr = fmt.Errorf("读取核心沙盒启动状态失败：%w", status.err)
+				c.awaitErr = fmt.Errorf("Failed to read core sandbox startup status: %w", status.err)
 			} else if message := strings.TrimSpace(string(status.data)); message != "" {
 				c.awaitErr = errors.New(message)
 			}
@@ -130,7 +130,7 @@ func (c *Command) AwaitExec() error {
 			}
 			_ = reader.Close()
 			c.statusReader = nil
-			c.awaitErr = fmt.Errorf("等待核心沙盒 exec 超时")
+			c.awaitErr = fmt.Errorf("Timed out while waiting for core sandbox exec")
 		}
 	})
 	return c.awaitErr
@@ -165,12 +165,12 @@ func (c *Command) closeParentWriters() {
 func createReexecConfigFile(root string, config reexecConfig) (*os.File, error) {
 	file, err := os.CreateTemp(root, ".reexec-config-*")
 	if err != nil {
-		return nil, fmt.Errorf("创建核心沙盒 re-exec 配置失败：%w", err)
+		return nil, fmt.Errorf("Failed to create core sandbox re-exec configuration: %w", err)
 	}
 	name := file.Name()
 	if err := os.Remove(name); err != nil {
 		_ = file.Close()
-		return nil, fmt.Errorf("隐藏核心沙盒 re-exec 配置失败：%w", err)
+		return nil, fmt.Errorf("Failed to hide core sandbox re-exec configuration: %w", err)
 	}
 
 	data, err := json.Marshal(config)
@@ -182,7 +182,7 @@ func createReexecConfigFile(root string, config reexecConfig) (*os.File, error) 
 	}
 	if err != nil {
 		_ = file.Close()
-		return nil, fmt.Errorf("写入核心沙盒 re-exec 配置失败：%w", err)
+		return nil, fmt.Errorf("Failed to write core sandbox re-exec configuration: %w", err)
 	}
 	return file, nil
 }
@@ -201,14 +201,14 @@ func reexecEnvironment() []string {
 func validateWritablePaths(paths []string) error {
 	for _, path := range paths {
 		if strings.TrimSpace(path) == "" {
-			return &configError{err: fmt.Errorf("映射可信路径失败：路径不能为空")}
+			return &configError{err: fmt.Errorf("Failed to map trusted path: path cannot be empty")}
 		}
 		path, err := normalizeSandboxPath(path)
 		if err != nil {
-			return &configError{err: fmt.Errorf("映射可信路径失败 %q：%w", path, err)}
+			return &configError{err: fmt.Errorf("Failed to map trusted path %q: %w", path, err)}
 		}
 		if _, err := os.Stat(path); err != nil {
-			return &configError{err: fmt.Errorf("映射可信路径失败 %q：%w", path, err)}
+			return &configError{err: fmt.Errorf("Failed to map trusted path %q: %w", path, err)}
 		}
 	}
 	return nil

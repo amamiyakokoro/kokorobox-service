@@ -68,7 +68,7 @@ func (c *noopProcessController) Stop(pid int32) error {
 	}
 	if exited, err := waitForUnixProcessExit(pid, 20, 100*time.Millisecond); err == nil {
 		if !exited && stopErr == nil {
-			stopErr = fmt.Errorf("等待核心进程退出超时")
+			stopErr = fmt.Errorf("Timed out while waiting for core process exit")
 		}
 	} else if stopErr == nil {
 		stopErr = err

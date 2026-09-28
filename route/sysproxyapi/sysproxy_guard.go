@@ -67,14 +67,14 @@ func configureSysproxyGuard(r *http.Request, enabled bool, mode sysproxyGuardMod
 
 	runner, err := captureSysproxyGuardRunner(r)
 	if err != nil {
-		return fmt.Errorf("初始化系统代理守护失败：%w", err)
+		return fmt.Errorf("Failed to initialize system proxy guard: %w", err)
 	}
 
 	guardOpts := cloneSysproxyOptions(opts)
 	current, err := runner.Query(guardOpts)
 	if err != nil {
 		_ = runner.Close()
-		return fmt.Errorf("读取系统代理守护目标失败：%w", err)
+		return fmt.Errorf("Failed to read system proxy guard target: %w", err)
 	}
 
 	expected := newSysproxyGuardSnapshot(mode, current)
@@ -93,7 +93,7 @@ func configureSysproxyGuard(r *http.Request, enabled bool, mode sysproxyGuardMod
 
 func configureSysproxyGuardBestEffort(r *http.Request, enabled bool, mode sysproxyGuardMode, opts *sysproxy.Options) {
 	if err := configureSysproxyGuard(r, enabled, mode, opts); err != nil {
-		log.Printf("系统代理已设置，但系统代理守护启动失败：%v", err)
+		log.Printf("System proxy configured, but system proxy guard failed to start: %v", err)
 		publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, mode, false, "Failed to start system proxy guard; it has stopped", err)
 	}
 }
@@ -122,7 +122,7 @@ func (s *sysproxyGuardState) start(config *sysproxyGuardConfig) {
 		oldCancel()
 	}
 
-	log.Printf("System proxy guard started：%s", config.mode)
+	log.Printf("System proxy guard started: %s", config.mode)
 	publishSysproxyGuardEvent(sysproxyEventGuardStarted, config.mode, true, "System proxy guard started", nil)
 	go s.run(ctx, generation, config)
 }
@@ -168,8 +168,8 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 		if err != nil {
 			errText := err.Error()
 			if errText != lastErr {
-				log.Printf("系统代理守护检查失败：%v", err)
-				publishSysproxyGuardEvent(sysproxyEventGuardCheckFailed, config.mode, true, "系统代理守护检查失败", err)
+				log.Printf("Failed to check system proxy guard: %v", err)
+				publishSysproxyGuardEvent(sysproxyEventGuardCheckFailed, config.mode, true, "Failed to check system proxy guard", err)
 				lastErr = errText
 			}
 			if !waitSysproxyGuardNextChange(ctx, cancelWatch, watchErr) {
@@ -184,17 +184,17 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 				if !s.active(generation) {
 					return nil
 				}
-				log.Println("System proxy guard detected proxy settings were changed，正在恢复")
+				log.Println("System proxy guard detected proxy settings were changed; restoring settings")
 				publishSysproxyGuardEvent(sysproxyEventGuardChanged, config.mode, true, "System proxy guard detected proxy settings were changed", nil)
 				if err := config.runner.Apply(config.mode, config.opts); err != nil {
 					return err
 				}
 				current, err := config.runner.Query(config.opts)
 				if err != nil {
-					return fmt.Errorf("系统代理守护恢复后检查失败：%w", err)
+					return fmt.Errorf("Failed to verify system proxy settings after restoration: %w", err)
 				}
 				if !sysproxyGuardMatches(config.mode, config.expected, current) {
-					return fmt.Errorf("系统代理守护恢复后状态仍不匹配：expected=%+v current=%+v", config.expected, newSysproxyGuardSnapshot(config.mode, current))
+					return fmt.Errorf("System proxy settings still differ after restoration: expected=%+v current=%+v", config.expected, newSysproxyGuardSnapshot(config.mode, current))
 				}
 				restored = true
 				return nil
@@ -202,8 +202,8 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 			if err != nil {
 				errText := err.Error()
 				if errText != lastErr {
-					log.Printf("系统代理守护恢复失败：%v", err)
-					publishSysproxyGuardEvent(sysproxyEventGuardRestoreFailed, config.mode, true, "系统代理守护恢复失败", err)
+					log.Printf("Failed to restore system proxy settings: %v", err)
+					publishSysproxyGuardEvent(sysproxyEventGuardRestoreFailed, config.mode, true, "Failed to restore system proxy settings", err)
 					lastErr = errText
 				}
 				if !waitSysproxyGuardNextChange(ctx, nil, watchErr) {
@@ -231,8 +231,8 @@ func (s *sysproxyGuardState) run(ctx context.Context, generation uint64, config 
 			}
 			errText := err.Error()
 			if errText != lastErr {
-				log.Printf("系统代理守护等待变更失败，将继续重试：%v", err)
-				publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, config.mode, true, "系统代理守护等待变更失败，将继续重试", err)
+				log.Printf("Failed to watch system proxy changes; retrying: %v", err)
+				publishSysproxyGuardEvent(sysproxyEventGuardWatchFailed, config.mode, true, "Failed to watch system proxy changes; retrying", err)
 				lastErr = errText
 			}
 		case <-watchCtx.Done():

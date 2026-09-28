@@ -78,26 +78,26 @@ func prepareRoot(config Config, root string) error {
 		for _, mountPoint := range slices.Backward(mounted) {
 			if err := makeSandboxMountPrivate(mountPoint); err != nil {
 				if cleanupErr == nil && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.ENOENT) {
-					cleanupErr = fmt.Errorf("隔离沙盒映射失败 %s：%w", mountPoint, err)
+					cleanupErr = fmt.Errorf("Failed to isolate sandbox mount %s: %w", mountPoint, err)
 				}
 				continue
 			}
 			if err := syscall.Unmount(mountPoint, syscall.MNT_DETACH); err != nil && cleanupErr == nil {
-				cleanupErr = fmt.Errorf("卸载沙盒映射失败 %s：%w", mountPoint, err)
+				cleanupErr = fmt.Errorf("Failed to unmount sandbox mount %s: %w", mountPoint, err)
 			}
 		}
 		if err := makeSandboxMountPrivate(root); err != nil {
 			if cleanupErr == nil && !errors.Is(err, syscall.EINVAL) && !errors.Is(err, syscall.ENOENT) {
-				cleanupErr = fmt.Errorf("隔离核心沙盒根目录失败 %s：%w", root, err)
+				cleanupErr = fmt.Errorf("Failed to isolate core sandbox root %s: %w", root, err)
 			}
 		} else if err := syscall.Unmount(root, syscall.MNT_DETACH); err != nil &&
 			cleanupErr == nil &&
 			!errors.Is(err, syscall.EINVAL) &&
 			!errors.Is(err, syscall.ENOENT) {
-			cleanupErr = fmt.Errorf("卸载核心沙盒根目录失败 %s：%w", root, err)
+			cleanupErr = fmt.Errorf("Failed to unmount core sandbox root %s: %w", root, err)
 		}
 		if err := os.RemoveAll(root); err != nil && cleanupErr == nil {
-			cleanupErr = fmt.Errorf("清理核心沙盒目录失败：%w", err)
+			cleanupErr = fmt.Errorf("Failed to clean up core sandbox directory: %w", err)
 		}
 		return cleanupErr
 	}
@@ -123,7 +123,7 @@ func createSandboxRoot() (string, error) {
 	}
 	root, err := os.MkdirTemp("", rootTemplate)
 	if err != nil {
-		return "", fmt.Errorf("创建核心沙盒目录失败：%w", err)
+		return "", fmt.Errorf("Failed to create core sandbox directory: %w", err)
 	}
 	return root, nil
 }
@@ -132,16 +132,16 @@ func validateSandboxRoot(root string) error {
 	root = filepath.Clean(root)
 	if filepath.Dir(root) != filepath.Clean(os.TempDir()) ||
 		!strings.HasPrefix(filepath.Base(root), sandboxRootPrefix) {
-		return fmt.Errorf("核心沙盒目录不受信任：%s", root)
+		return fmt.Errorf("Untrusted core sandbox directory: %s", root)
 	}
 	info, err := os.Lstat(root)
 	if err != nil {
-		return fmt.Errorf("读取核心沙盒目录失败 %s：%w", root, err)
+		return fmt.Errorf("Failed to read core sandbox directory %s: %w", root, err)
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
 		int(stat.Uid) != os.Geteuid() || info.Mode().Perm() != 0o700 {
-		return fmt.Errorf("核心沙盒目录权限无效：%s", root)
+		return fmt.Errorf("Invalid core sandbox directory permissions: %s", root)
 	}
 	return nil
 }
@@ -149,18 +149,18 @@ func validateSandboxRoot(root string) error {
 func sandboxRootTemplate() (string, error) {
 	startTime, err := linuxProcessStartTime(os.Getpid())
 	if err != nil {
-		return "", fmt.Errorf("读取 service 进程启动时间失败：%w", err)
+		return "", fmt.Errorf("Failed to read service process start time: %w", err)
 	}
 	return fmt.Sprintf("%s%d-%s-*", sandboxRootPrefix, os.Getpid(), startTime), nil
 }
 
 func mountSandboxRoot(root string) error {
 	if err := syscall.Mount(root, root, "", uintptr(syscall.MS_BIND), ""); err != nil {
-		return fmt.Errorf("初始化核心沙盒根目录失败 %s：%w", root, err)
+		return fmt.Errorf("Failed to initialize core sandbox root %s: %w", root, err)
 	}
 	if err := makeSandboxMountPrivate(root); err != nil {
 		_ = syscall.Unmount(root, syscall.MNT_DETACH)
-		return fmt.Errorf("隔离核心沙盒根目录失败 %s：%w", root, err)
+		return fmt.Errorf("Failed to isolate core sandbox root %s: %w", root, err)
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func prepareLinuxSandboxStaticLayout(root string) error {
 func cleanupStaleLinuxSandboxRoots() {
 	roots, err := filepath.Glob(filepath.Join(os.TempDir(), sandboxRootPrefix+"*"))
 	if err != nil {
-		logSandboxCleanupError(fmt.Errorf("查找残留核心沙盒目录失败：%w", err))
+		logSandboxCleanupError(fmt.Errorf("Failed to find stale core sandbox directories: %w", err))
 		return
 	}
 
@@ -227,12 +227,12 @@ func linuxProcessStartTime(pid int) (string, error) {
 	}
 	closingParen := strings.LastIndexByte(string(data), ')')
 	if closingParen < 0 {
-		return "", fmt.Errorf("进程状态格式无效")
+		return "", fmt.Errorf("Invalid process status format")
 	}
 	fields := strings.Fields(string(data[closingParen+1:]))
 	const startTimeIndexAfterCommand = 19
 	if len(fields) <= startTimeIndexAfterCommand {
-		return "", fmt.Errorf("进程状态字段不足")
+		return "", fmt.Errorf("Insufficient process status fields")
 	}
 	return fields[startTimeIndexAfterCommand], nil
 }
@@ -243,7 +243,7 @@ func cleanupLinuxSandboxRoot(root string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("读取残留核心沙盒目录失败 %s：%w", root, err)
+		return fmt.Errorf("Failed to read stale core sandbox directory %s: %w", root, err)
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil
@@ -259,7 +259,7 @@ func cleanupLinuxSandboxRoot(root string) error {
 			if !errors.Is(err, syscall.EINVAL) &&
 				!errors.Is(err, syscall.ENOENT) &&
 				cleanupErr == nil {
-				cleanupErr = fmt.Errorf("隔离残留核心沙盒映射失败 %s：%w", mountPoint, err)
+				cleanupErr = fmt.Errorf("Failed to isolate stale core sandbox mount %s: %w", mountPoint, err)
 			}
 			continue
 		}
@@ -267,11 +267,11 @@ func cleanupLinuxSandboxRoot(root string) error {
 			!errors.Is(err, syscall.EINVAL) &&
 			!errors.Is(err, syscall.ENOENT) &&
 			cleanupErr == nil {
-			cleanupErr = fmt.Errorf("卸载残留核心沙盒映射失败 %s：%w", mountPoint, err)
+			cleanupErr = fmt.Errorf("Failed to unmount stale core sandbox mount %s: %w", mountPoint, err)
 		}
 	}
 	if err := os.RemoveAll(root); err != nil && cleanupErr == nil {
-		cleanupErr = fmt.Errorf("清理残留核心沙盒目录失败 %s：%w", root, err)
+		cleanupErr = fmt.Errorf("Failed to clean up stale core sandbox directory %s: %w", root, err)
 	}
 	return cleanupErr
 }
@@ -343,11 +343,11 @@ func mountIntoSandbox(target string, mount sandboxMount) error {
 
 	flags := uintptr(syscall.MS_BIND | syscall.MS_REC)
 	if err := syscall.Mount(mount.source, target, "", flags, ""); err != nil {
-		return fmt.Errorf("映射沙盒路径失败 %s -> %s：%w", mount.source, mount.target, err)
+		return fmt.Errorf("Failed to map sandbox path %s -> %s: %w", mount.source, mount.target, err)
 	}
 	if err := makeSandboxMountPrivate(target); err != nil {
 		_ = syscall.Unmount(target, syscall.MNT_DETACH)
-		return fmt.Errorf("隔离沙盒映射失败 %s：%w", mount.target, err)
+		return fmt.Errorf("Failed to isolate sandbox mount %s: %w", mount.target, err)
 	}
 
 	if mount.readOnly {
@@ -355,7 +355,7 @@ func mountIntoSandbox(target string, mount sandboxMount) error {
 		if err := unix.MountSetattr(unix.AT_FDCWD, target, unix.AT_RECURSIVE, attr); err != nil {
 			if err := makeSandboxMountTreeReadOnly(target); err != nil {
 				_ = syscall.Unmount(target, syscall.MNT_DETACH)
-				return fmt.Errorf("设置沙盒递归只读映射失败 %s：%w", mount.target, err)
+				return fmt.Errorf("Failed to make sandbox mount %s recursively read-only: %w", mount.target, err)
 			}
 		}
 	}
@@ -371,7 +371,7 @@ func makeSandboxMountTreeReadOnly(target string) error {
 	for _, mountPoint := range mountPoints {
 		flags := uintptr(syscall.MS_BIND | syscall.MS_REMOUNT | syscall.MS_RDONLY)
 		if err := syscall.Mount("", mountPoint, "", flags, ""); err != nil {
-			return fmt.Errorf("只读重挂载 %s 失败：%w", mountPoint, err)
+			return fmt.Errorf("Failed to remount %s read-only: %w", mountPoint, err)
 		}
 	}
 	return nil
@@ -390,11 +390,11 @@ func mountKernelFilesystem(target string, fsType string, flags uintptr) error {
 		return err
 	}
 	if err := syscall.Mount(fsType, target, fsType, flags, ""); err != nil {
-		return fmt.Errorf("挂载 %s 失败：%w", target, err)
+		return fmt.Errorf("Failed to mount %s: %w", target, err)
 	}
 	if err := makeSandboxMountPrivate(target); err != nil {
 		_ = syscall.Unmount(target, syscall.MNT_DETACH)
-		return fmt.Errorf("隔离沙盒映射失败 %s：%w", target, err)
+		return fmt.Errorf("Failed to isolate sandbox mount %s: %w", target, err)
 	}
 	return nil
 }
@@ -454,7 +454,7 @@ func sandboxMounts(config Config) ([]sandboxMount, error) {
 	}
 	for _, path := range config.WritablePaths {
 		if filepath.Clean(path) == string(os.PathSeparator) {
-			log.Printf("sandbox 的可写路径包含 /，文件系统隔离已关闭")
+			log.Printf("Sandbox writable paths include /; filesystem isolation is disabled")
 			return []sandboxMount{{
 				source: "/",
 				target: "/",
@@ -492,7 +492,7 @@ func sandboxMounts(config Config) ([]sandboxMount, error) {
 	}
 	resolvedExecutable, err := filepath.EvalSymlinks(config.ExecutablePath)
 	if err != nil {
-		return nil, fmt.Errorf("解析核心可执行文件真实路径失败：%w", err)
+		return nil, fmt.Errorf("Failed to resolve core executable real path: %w", err)
 	}
 	resolvedCoreDir, err := sandboxDirForPath(resolvedExecutable)
 	if err != nil {
@@ -521,7 +521,7 @@ func sandboxMounts(config Config) ([]sandboxMount, error) {
 	}
 	for _, path := range config.WritablePaths {
 		if err := addWritablePath(path); err != nil {
-			return nil, &configError{err: fmt.Errorf("映射可信路径失败 %q：%w", path, err)}
+			return nil, &configError{err: fmt.Errorf("Failed to map trusted path %q: %w", path, err)}
 		}
 	}
 	for _, path := range config.WritableDirs {
@@ -543,10 +543,10 @@ func sandboxMounts(config Config) ([]sandboxMount, error) {
 func ensureXTablesLock() error {
 	file, err := os.OpenFile("/run/xtables.lock", os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
-		return fmt.Errorf("准备 iptables 共享锁失败：%w", err)
+		return fmt.Errorf("Failed to prepare shared iptables lock: %w", err)
 	}
 	if err := file.Close(); err != nil {
-		return fmt.Errorf("关闭 iptables 共享锁失败：%w", err)
+		return fmt.Errorf("Failed to close shared iptables lock: %w", err)
 	}
 	return nil
 }
@@ -622,7 +622,7 @@ func sandboxTarget(root string, target string) string {
 
 func normalizeSandboxPath(path string) (string, error) {
 	if strings.TrimSpace(path) == "" {
-		return "", fmt.Errorf("路径不能为空")
+		return "", fmt.Errorf("Path cannot be empty")
 	}
 	if !filepath.IsAbs(path) {
 		absPath, err := filepath.Abs(path)
@@ -636,6 +636,6 @@ func normalizeSandboxPath(path string) (string, error) {
 
 func logSandboxCleanupError(err error) {
 	if err != nil {
-		log.Printf("清理核心沙盒失败：%v", err)
+		log.Printf("Failed to clean up core sandbox: %v", err)
 	}
 }

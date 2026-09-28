@@ -23,7 +23,7 @@ func startTrafficMonitorProxy(launch *launchSession, sddl string) (func(), error
 
 	listener, err := listen.ListenNamedPipe(trafficMonitorPipeAddress, sddl)
 	if err != nil {
-		return nil, fmt.Errorf("监听 %s 失败：%w", trafficMonitorPipeAddress, err)
+		return nil, fmt.Errorf("Failed to listen on %s: %w", trafficMonitorPipeAddress, err)
 	}
 
 	proxy := newTrafficMonitorReverseProxy(launch.controllerAddr)
@@ -39,14 +39,14 @@ func startTrafficMonitorProxy(launch *launchSession, sddl string) (func(), error
 
 	go func() {
 		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("TrafficMonitor 兼容 pipe 服务异常退出: %v", err)
+			log.Printf("TrafficMonitor compatibility pipe server exited unexpectedly: %v", err)
 		}
 	}()
-	log.Printf("TrafficMonitor 兼容 pipe Listen address: %s", listener.Addr().String())
+	log.Printf("TrafficMonitor compatibility pipe listen address: %s", listener.Addr().String())
 
 	return func() {
 		if err := server.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("关闭 TrafficMonitor 兼容 pipe 失败: %v", err)
+			log.Printf("Failed to close TrafficMonitor compatibility pipe: %v", err)
 		}
 	}, nil
 }
@@ -68,7 +68,7 @@ func newTrafficMonitorReverseProxy(controllerAddr string) *httputil.ReverseProxy
 			},
 		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
-			http.Error(w, fmt.Sprintf("转发 TrafficMonitor 流量请求失败：%v", err), http.StatusBadGateway)
+			http.Error(w, fmt.Sprintf("Failed to forward TrafficMonitor traffic request: %v", err), http.StatusBadGateway)
 		},
 	}
 }
