@@ -3,7 +3,7 @@ module github.com/amamiyakokoro/kokorobox-service
 go 1.26.0
 
 require (
-	github.com/amamiyakokoro/sysproxy-go/v2 v2.0.1
+	github.com/amamiyakokoro/sysproxy-go/v2 v2.0.2
 	github.com/ebitengine/purego v0.11.1
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/render v1.0.3
