@@ -5,10 +5,13 @@ package sysproxyapi
 import (
 	"context"
 	"fmt"
-	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 	"net/http"
 	"os"
+	"os/user"
+	"strconv"
 	"strings"
+
+	"github.com/amamiyakokoro/kokorobox-service/route/pipectx"
 
 	"github.com/amamiyakokoro/sysproxy-go/v2/sysproxy"
 )
@@ -22,12 +25,40 @@ type linuxSysproxyGuardRunner struct {
 func captureSysproxyGuardRunner(r *http.Request) (sysproxyGuardRunner, error) {
 	peer, ok := pipectx.RequestUnixPeerInfo(r)
 	if !ok {
-		return &linuxSysproxyGuardRunner{}, nil
+		return nil, fmt.Errorf("system proxy request has no Linux user identity")
 	}
+	return captureLinuxSysproxyGuardRunner(peer)
+}
 
+func captureLinuxSysproxyGuardRunner(peer pipectx.UnixPeerInfo) (*linuxSysproxyGuardRunner, error) {
 	peerEnv, err := readLinuxProcessEnv(peer.PID)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read connected process environment: %w", err)
+	}
+	// The proxy backend can resolve an empty launcher environment by UID.
+	// Capture that resolved session too, so both the live lease and its recovery
+	// record remain usable after the connected process exits.
+	recoverable := false
+	for _, item := range peerEnv {
+		key, value, ok := strings.Cut(item, "=")
+		if ok && value != "" && recoveryLinuxEnvKeys[key] {
+			recoverable = true
+			break
+		}
+	}
+	if !recoverable {
+		account, err := user.LookupId(strconv.FormatUint(uint64(peer.UID), 10))
+		if err != nil {
+			return nil, fmt.Errorf("resolve connected Linux user: %w", err)
+		}
+		opts, err := sysproxy.OptionsForUser(account.Username)
+		if err != nil {
+			return nil, fmt.Errorf("resolve connected Linux user session: %w", err)
+		}
+		if opts.PeerUID != peer.UID {
+			return nil, fmt.Errorf("resolved Linux session does not match its socket identity")
+		}
+		peerEnv = opts.Environment
 	}
 
 	return &linuxSysproxyGuardRunner{
@@ -80,13 +111,9 @@ func readLinuxProcessEnv(pid int) ([]string, error) {
 
 	env := []string{}
 	for item := range strings.SplitSeq(string(data), "\x00") {
-		if item == "" {
-			continue
+		if item != "" && strings.Contains(item, "=") {
+			env = append(env, item)
 		}
-		if !strings.Contains(item, "=") {
-			continue
-		}
-		env = append(env, item)
 	}
 	return env, nil
 }

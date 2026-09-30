@@ -26,6 +26,7 @@ func recoverySysproxyOptions(opts *sysproxy.Options, runner sysproxyGuardRunner)
 	recovery.PeerPID = 0
 	recovery.PeerUID = linuxRunner.uid
 	recovery.PeerGID = linuxRunner.gid
+	recovery.Environment = nil
 	for _, item := range linuxRunner.env {
 		key, _, ok := strings.Cut(item, "=")
 		if ok && recoveryLinuxEnvKeys[key] {
