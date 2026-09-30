@@ -32,6 +32,7 @@ func Router() http.Handler {
 
 	r.Get("/", coreStatus)
 	r.Get("/desired", coreDesiredStatus)
+	r.Get("/proxy-diagnostics", coreProxyDiagnostics)
 	r.Get("/events", coreEvents)
 	r.HandleFunc("/controller", coreControllerProxy)
 	r.HandleFunc("/controller/*", coreControllerProxy)

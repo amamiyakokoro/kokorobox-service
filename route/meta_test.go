@@ -21,7 +21,7 @@ func TestMetaReportsAvailablePlatformCapabilities(t *testing.T) {
 	if meta.APIVersion != ServiceAPIVersion || meta.ServiceVersion != ServiceVersion {
 		t.Fatalf("invalid service identity: %+v", meta)
 	}
-	if !meta.Capabilities.CoreDesiredState || !meta.Capabilities.SysproxyLease || !meta.Capabilities.SysproxyEvents || !meta.Capabilities.ServiceLogs {
+	if !meta.Capabilities.CoreDesiredState || !meta.Capabilities.SysproxyLease || !meta.Capabilities.SysproxyEvents || !meta.Capabilities.ServiceLogs || !meta.Capabilities.ProxyRuntimeDiagnostics {
 		t.Fatalf("missing service capabilities: %+v", meta.Capabilities)
 	}
 	if meta.Capabilities.SysproxyNetworkReconcile != (runtime.GOOS == "darwin") ||

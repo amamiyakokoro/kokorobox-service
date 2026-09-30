@@ -20,6 +20,7 @@ type serviceCapabilities struct {
 	DNSLease                 bool `json:"dnsLease"`
 	ProcessRouter            bool `json:"processRouter"`
 	WindowsUwpLoopback       bool `json:"windowsUwpLoopback"`
+	ProxyRuntimeDiagnostics  bool `json:"proxyRuntimeDiagnostics"`
 	ServiceLogs              bool `json:"serviceLogs"`
 }
 
@@ -42,6 +43,7 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 			ProcessRouter:            runtime.GOOS == "windows" || runtime.GOOS == "linux",
 			WindowsUwpLoopback:       runtime.GOOS == "windows",
 			ServiceLogs:              true,
+			ProxyRuntimeDiagnostics:  true,
 		},
 	})
 }

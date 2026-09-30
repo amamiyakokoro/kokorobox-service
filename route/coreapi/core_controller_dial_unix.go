@@ -16,3 +16,5 @@ func dialCoreController(ctx context.Context, network string, address string) (ne
 	var dialer net.Dialer
 	return dialer.DialContext(ctx, "unix", address)
 }
+
+func directCoreControllerEndpoint() (string, string) { return "unix", "/tmp/kokorobox-mihomo-api.sock" }

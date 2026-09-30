@@ -33,6 +33,8 @@ func Router() http.Handler {
 	r.Post("/proxy", proxy)
 	r.Post("/disable", disable)
 	r.Post("/renew", renew)
+	r.Post("/native/prepare", prepareNativeProxy)
+	r.Post("/native/adopt", adoptNativeProxy)
 	return r
 }
 

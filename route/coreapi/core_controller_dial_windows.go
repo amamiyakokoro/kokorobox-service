@@ -15,3 +15,5 @@ func dialCoreController(ctx context.Context, network string, address string) (ne
 	}
 	return namedpipe.DialContext(ctx, address)
 }
+
+func directCoreControllerEndpoint() (string, string) { return "pipe", `\\.\pipe\KokoroBox\mihomo` }
