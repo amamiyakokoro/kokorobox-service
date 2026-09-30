@@ -72,6 +72,9 @@ func coreProxyDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}
 		// A private per-call transport cannot retain a previous core's IPC connection.
 		transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			if direct {
+				return dialDirectCoreController(ctx)
+			}
 			return dialCoreController(ctx, network, address)
 		}}
 		defer transport.CloseIdleConnections()
