@@ -10,6 +10,8 @@ import (
 	"syscall"
 )
 
+func isConnectionRefused(err error) bool { return errors.Is(err, syscall.ECONNREFUSED) }
+
 func dialCoreController(ctx context.Context, network string, address string) (net.Conn, error) {
 	if network != "unix" {
 		return nil, fmt.Errorf("Unix core controller only supports Unix sockets")

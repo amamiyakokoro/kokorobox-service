@@ -44,6 +44,7 @@ type runtimeConnectivityState struct {
 	LatencyMs *int64 `json:"latencyMs,omitempty"`
 }
 type proxyRuntimeDiagnostics struct {
+	DNS          *runtimeDNSState         `json:"dns,omitempty"`
 	Core         runtimeCoreState         `json:"core"`
 	Proxy        runtimeProxyEndpoint     `json:"proxy"`
 	Listener     runtimeListenerState     `json:"listener"`
@@ -62,11 +63,11 @@ func coreProxyDiagnostics(w http.ResponseWriter, r *http.Request) {
 	if err != nil && !direct {
 		network, address = "", ""
 	}
-	result := collectProxyRuntimeDiagnostics(r.Context(), running, lastError, direct, func(ctx context.Context) (*http.Response, error) {
+	request := func(ctx context.Context, path string) (*http.Response, error) {
 		if address == "" {
 			return nil, errors.New("controller-unavailable")
 		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost/configs", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost"+path, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -79,12 +80,24 @@ func coreProxyDiagnostics(w http.ResponseWriter, r *http.Request) {
 		}}
 		defer transport.CloseIdleConnections()
 		return (&http.Client{Transport: transport, Timeout: controllerTimeout}).Do(req)
+	}
+	var dnsResult chan runtimeDNSState
+	if r.URL.Query().Get("probe") != "false" {
+		dnsResult = make(chan runtimeDNSState, 1)
+		go func() { dnsResult <- probeCoreDNS(r.Context(), request) }()
+	}
+	result := collectProxyRuntimeDiagnostics(r.Context(), running, lastError, direct, func(ctx context.Context) (*http.Response, error) {
+		return request(ctx, "/configs")
 	}, probeLocalProxyListener, func(ctx context.Context, endpoint string) runtimeConnectivityState {
 		if r.URL.Query().Get("probe") == "false" {
 			return runtimeConnectivityState{Outcome: "unreachable", ErrorCode: "not-tested"}
 		}
 		return probeOutboundProxy(ctx, endpoint, connectivityEndpoint)
 	})
+	if dnsResult != nil {
+		dns := <-dnsResult
+		result.DNS = &dns
+	}
 	render.JSON(w, r, result)
 }
 
@@ -110,7 +123,7 @@ func collectProxyRuntimeDiagnostics(ctx context.Context, running bool, lastError
 		if errors.Is(err, context.DeadlineExceeded) || isTimeout(err) {
 			result.Core.ErrorCode = "timeout"
 		}
-		if direct && (errors.Is(err, syscall.ECONNREFUSED) || (errors.Is(err, syscall.ENOENT) || errors.Is(err, os.ErrNotExist))) {
+		if direct && (isConnectionRefused(err) || (errors.Is(err, syscall.ENOENT) || errors.Is(err, os.ErrNotExist))) {
 			stopped := false
 			result.Core.Running = &stopped
 		}
@@ -231,7 +244,7 @@ func networkErrorCode(err error) string {
 	if errors.Is(err, context.DeadlineExceeded) || isTimeout(err) {
 		return "timeout"
 	}
-	if errors.Is(err, syscall.ECONNREFUSED) {
+	if isConnectionRefused(err) {
 		return "connection-refused"
 	}
 	// Only match our own fixed errors. Never return transport error text.

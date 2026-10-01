@@ -4,10 +4,17 @@ package coreapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/amamiyakokoro/kokorobox-service/listen/namedpipe"
+	"golang.org/x/sys/windows"
 	"net"
+	"syscall"
 )
+
+func isConnectionRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, windows.WSAECONNREFUSED)
+}
 
 func dialCoreController(ctx context.Context, network string, address string) (net.Conn, error) {
 	if network != "pipe" {
