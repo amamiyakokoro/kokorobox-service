@@ -13,6 +13,7 @@ var ServiceVersion = "dev"
 const ServiceAPIVersion = 1
 
 type serviceCapabilities struct {
+	CoreProfileValidation    bool `json:"coreProfileValidation"`
 	ProcessRouterEvents      bool `json:"processRouterEvents"`
 	SysproxyPACServer        bool `json:"sysproxyPacServer"`
 	CoreDesiredState         bool `json:"coreDesiredState"`
@@ -38,6 +39,7 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 		APIVersion:     ServiceAPIVersion,
 		Capabilities: serviceCapabilities{
 			CoreDesiredState:         true,
+			CoreProfileValidation:    true,
 			SysproxyPACServer:        true,
 			SysproxyLease:            true,
 			SysproxyEvents:           true,
