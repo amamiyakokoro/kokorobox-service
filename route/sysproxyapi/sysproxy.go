@@ -15,9 +15,10 @@ import (
 )
 
 type proxyRequest struct {
-	Server string `json:"server,omitempty"`
-	Bypass string `json:"bypass,omitempty"`
-	Url    string `json:"url,omitempty"`
+	Server string  `json:"server,omitempty"`
+	Bypass string  `json:"bypass,omitempty"`
+	Url    string  `json:"url,omitempty"`
+	Script *string `json:"script,omitempty"`
 
 	Device           string `json:"device,omitempty"`
 	OnlyActiveDevice bool   `json:"only_active_device,omitempty"`
@@ -119,6 +120,11 @@ func pac(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Script != nil && (req.Url != "" || len(*req.Script) == 0 || len(*req.Script) > maxPACScriptBytes) {
+		httphelper.SendError(w, httphelper.BadRequest("Invalid PAC script or conflicting URL"))
+		return
+	}
+	var managed *managedPACServer
 	t := time.Now()
 	opts := prepareSysproxyOptions(r, &sysproxy.Options{
 		PACURL:           req.Url,
@@ -132,6 +138,14 @@ func pac(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
+			if req.Script != nil {
+				managed, err = startManagedPACServer(*req.Script)
+				if err != nil {
+					_ = runner.Close()
+					return err
+				}
+				opts.PACURL = managed.url
+			}
 			if err := sysproxy.SetPac(opts); err != nil {
 				_ = runner.Close()
 				return err
@@ -139,6 +153,7 @@ func pac(w http.ResponseWriter, r *http.Request) {
 			if err := beginManagedProxy(runner, sysproxyGuardModePAC, opts); err != nil {
 				return err
 			}
+			activeSysproxyLease.pacServer = managed
 			StopGuard()
 			configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModePAC, opts)
 			return nil
@@ -146,7 +161,12 @@ func pac(w http.ResponseWriter, r *http.Request) {
 	})
 	logSysproxyOperation("set_pac", "PAC settings updated", "Failed to update PAC settings", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
 	if err != nil {
+		managed.close()
 		httphelper.SendError(w, err)
+		return
+	}
+	if managed != nil {
+		render.JSON(w, r, map[string]string{"url": managed.url})
 		return
 	}
 	render.NoContent(w, r)
