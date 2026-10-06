@@ -28,6 +28,7 @@ func Router() http.Handler {
 	r.Post("/stop", stop)
 	r.Put("/rules", replaceRules)
 	r.Get("/status", status)
+	r.Get("/events", statusEvents)
 	r.Get("/logs", diagnosticLogs)
 	r.Delete("/logs", clearDiagnosticLogs)
 	r.Post("/firewall/repair", repairFirewall)
