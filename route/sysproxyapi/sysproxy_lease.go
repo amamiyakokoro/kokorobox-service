@@ -18,6 +18,7 @@ const sysproxyLeaseRetry = 15 * time.Second
 const sysproxyReconcileInterval = 5 * time.Second
 
 type sysproxyLease struct {
+	pacServer        *managedPACServer
 	mode             sysproxyGuardMode
 	opts             *sysproxy.Options
 	expected         sysproxyGuardSnapshot
@@ -84,6 +85,7 @@ func clearSysproxyLease() {
 	if lease.reconcileTimer != nil {
 		lease.reconcileTimer.Stop()
 	}
+	lease.pacServer.close()
 	if err := lease.runner.Close(); err != nil {
 		log.Errorf("Failed to close system proxy owner: %v", err)
 	}

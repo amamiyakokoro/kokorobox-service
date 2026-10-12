@@ -38,6 +38,7 @@ func Router() http.Handler {
 	r.HandleFunc("/controller/*", coreControllerProxy)
 	r.Get("/profile", coreProfile)
 	r.Post("/profile", coreSaveProfile)
+	r.Post("/profile/validate", validateProfile)
 	r.Patch("/profile", corePatchProfile)
 	r.Post("/start", coreStart)
 	r.Post("/stop", coreStop)

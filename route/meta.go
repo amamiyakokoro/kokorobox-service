@@ -13,6 +13,9 @@ var ServiceVersion = "dev"
 const ServiceAPIVersion = 1
 
 type serviceCapabilities struct {
+	CoreProfileValidation    bool `json:"coreProfileValidation"`
+	ProcessRouterEvents      bool `json:"processRouterEvents"`
+	SysproxyPACServer        bool `json:"sysproxyPacServer"`
 	CoreDesiredState         bool `json:"coreDesiredState"`
 	SysproxyLease            bool `json:"sysproxyLease"`
 	SysproxyEvents           bool `json:"sysproxyEvents"`
@@ -36,11 +39,14 @@ func metaStatus(w http.ResponseWriter, r *http.Request) {
 		APIVersion:     ServiceAPIVersion,
 		Capabilities: serviceCapabilities{
 			CoreDesiredState:         true,
+			CoreProfileValidation:    true,
+			SysproxyPACServer:        true,
 			SysproxyLease:            true,
 			SysproxyEvents:           true,
 			SysproxyNetworkReconcile: runtime.GOOS == "darwin",
 			DNSLease:                 runtime.GOOS == "darwin",
 			ProcessRouter:            runtime.GOOS == "windows" || runtime.GOOS == "linux",
+			ProcessRouterEvents:      runtime.GOOS == "windows" || runtime.GOOS == "linux",
 			WindowsUwpLoopback:       runtime.GOOS == "windows",
 			ServiceLogs:              true,
 			ProxyRuntimeDiagnostics:  true,
