@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ProxyBridge.h"
+#include "diagnostic_queue.h"
 
 #define PROTOCOL_VERSION 1
 #define KOKORO_SOCKS_PORT 7891
@@ -95,9 +96,8 @@ static BOOL is_managed_process(const char *process_name) {
 static void diagnostic_connection(const char *process_name, DWORD pid, const char *dest_ip,
                                   UINT16 dest_port, const char *proxy_info) {
     if (!is_managed_process(process_name)) return;
-    fprintf(stderr, "diagnostic route process=%s pid=%lu destination=%s:%u result=%s\n",
+    diagnostic_enqueue("diagnostic route process=%s pid=%lu destination=%s:%u result=%s\n",
             process_name, (unsigned long)pid, dest_ip, dest_port, proxy_info);
-    fflush(stderr);
 }
 
 static void diagnostic_log(const char *message) {
@@ -105,10 +105,9 @@ static void diagnostic_log(const char *message) {
     // ProxyBridge's startup dump still includes the atomic BLOCK guard. It is
     // an intermediate state, not the committed policy reported below.
     if (strncmp(message, "Rule: ", 6) == 0)
-        fprintf(stderr, "diagnostic engine=level=debug Pending rule: %.*s\n", 900, message + 6);
+        diagnostic_enqueue("diagnostic engine=level=debug Pending rule: %.*s\n", 900, message + 6);
     else
-        fprintf(stderr, "diagnostic engine=%.*s\n", 900, message);
-    fflush(stderr);
+        diagnostic_enqueue("diagnostic engine=%.*s\n", 900, message);
 }
 
 static const char *action_name(RuleAction action) {
@@ -135,26 +134,25 @@ static void diagnostic_active_rules(const ParsedRule *rules, size_t count) {
     for (index = 0; index < count; ++index) {
         if (rules[index].enabled) enabled++;
     }
-    fprintf(stderr, "diagnostic engine=Active routing rules committed: applications=%zu exclusions=2 loopback_bypass=enabled\n", enabled);
-    fprintf(stderr, "diagnostic engine=Active exclusion: rule_id=%u local/link-local/multicast/broadcast destinations -> DIRECT (hosts=%s)\n",
+    diagnostic_enqueue("diagnostic engine=Active routing rules committed: applications=%zu exclusions=2 loopback_bypass=enabled\n", enabled);
+    diagnostic_enqueue("diagnostic engine=Active exclusion: rule_id=%u local/link-local/multicast/broadcast destinations -> DIRECT (hosts=%s)\n",
             rule_ids[0], mandatory_network_targets);
-    fprintf(stderr, "diagnostic engine=Active exclusion: rule_id=%u internal processes -> DIRECT (processes=%s)\n",
+    diagnostic_enqueue("diagnostic engine=Active exclusion: rule_id=%u internal processes -> DIRECT (processes=%s)\n",
             rule_ids[1], mandatory_process_names);
     for (index = 0; index < count; ++index) {
         const ParsedRule *rule = &rules[index];
         if (!rule->enabled) {
-            fprintf(stderr, "diagnostic engine=level=debug Inactive application rule: priority=%u process=%s action=%s protocol=%s\n",
+            diagnostic_enqueue("diagnostic engine=level=debug Inactive application rule: priority=%u process=%s action=%s protocol=%s\n",
                     rule->priority, rule->process_pattern, action_name(rule->action), protocol_name(rule->protocol));
             continue;
         }
-        fprintf(stderr, "diagnostic engine=Active application rule: priority=%u rule_id=%u process=%s action=%s protocol=%s",
-                rule->priority, rule_ids[index + 2], rule->process_pattern,
-                action_name(rule->action), protocol_name(rule->protocol));
+        char proxy_description[64] = "";
         if (rule->action == RULE_ACTION_PROXY)
-            fprintf(stderr, " proxy=SOCKS5://127.0.0.1:%d", KOKORO_SOCKS_PORT);
-        fputc('\n', stderr);
+            snprintf(proxy_description, sizeof(proxy_description), " proxy=SOCKS5://127.0.0.1:%d", KOKORO_SOCKS_PORT);
+        diagnostic_enqueue("diagnostic engine=Active application rule: priority=%u rule_id=%u process=%s action=%s protocol=%s%s\n",
+                rule->priority, rule_ids[index + 2], rule->process_pattern,
+                action_name(rule->action), protocol_name(rule->protocol), proxy_description);
     }
-    fflush(stderr);
 }
 
 static void emit(const char *event, const char *message) {
@@ -417,6 +415,10 @@ static BOOL replace_rules(const char *command) {
     }
     // Use the requested logging policy for the entire rebuild, including the
     // first update and updates that turn diagnostics off.
+    if (diagnostic_logging && !diagnostic_queue_start()) {
+        emit("error", "diagnostic writer failed to start");
+        return FALSE;
+    }
     ProxyBridge_SetLogCallback(diagnostic_logging ? diagnostic_log : NULL);
     if (!diagnostic_logging) {
         ProxyBridge_SetConnectionCallback(NULL);
@@ -539,6 +541,9 @@ int main(int argc, char **argv) {
     clear_rules();
     if (guard_id) ProxyBridge_DeleteRule(guard_id);
     if (proxy_id) ProxyBridge_DeleteProxyConfig(proxy_id);
+    ProxyBridge_SetLogCallback(NULL);
+    ProxyBridge_SetConnectionCallback(NULL);
+    diagnostic_queue_stop();
     emit("stopped", NULL);
     return exit_code;
 }

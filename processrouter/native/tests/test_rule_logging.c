@@ -82,6 +82,8 @@ static BOOL replace_and_capture(const char *rules, BOOL logging, BOOL *replaced)
         "\"failClosed\":true,\"proxyUdpDns\":false,\"diagnosticLogging\":%s,\"rules\":[%s]}",
         logging ? "true" : "false", rules);
     *replaced = replace_rules(command);
+    if (!diagnostic_queue_flush(3000)) return FALSE;
+    diagnostic_queue_stop();
     fflush(stderr);
     _dup2(saved, _fileno(stderr));
     _close(saved);

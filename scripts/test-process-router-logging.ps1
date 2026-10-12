@@ -20,3 +20,11 @@ cmd /c "`"$VcVars`" x64 >nul && cd /d `"$OutputDirectory`" && cl.exe $CompileArg
 if ($LASTEXITCODE -ne 0) { throw "Process Router logging regression test build failed." }
 & $TestPath
 if ($LASTEXITCODE -ne 0) { throw "Process Router logging regression test failed." }
+
+$QueueSource = Join-Path $PSScriptRoot "../processrouter/native/tests/test_diagnostic_queue.c"
+$QueueTestPath = Join-Path $OutputDirectory "test_diagnostic_queue.exe"
+$QueueArgs = "/nologo /utf-8 /O2 /W4 /D_WIN32_WINNT=0x0601 `"$QueueSource`" /link /OUT:`"$QueueTestPath`""
+cmd /c "`"$VcVars`" x64 >nul && cd /d `"$OutputDirectory`" && cl.exe $QueueArgs"
+if ($LASTEXITCODE -ne 0) { throw "Diagnostic queue regression test build failed." }
+& $QueueTestPath
+if ($LASTEXITCODE -ne 0) { throw "Diagnostic queue regression test failed." }
