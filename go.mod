@@ -7,6 +7,7 @@ require (
 	github.com/ebitengine/purego v0.11.1
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/render v1.0.3
+	github.com/go-ole/go-ole v1.3.0
 	github.com/kardianos/service v1.3.0
 	github.com/shirou/gopsutil/v4 v4.26.9
 	github.com/spf13/cobra v1.10.2
@@ -16,7 +17,6 @@ require (
 
 require (
 	github.com/ajg/form v1.9.0 // indirect
-	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260805114148-88456608a4f6 // indirect

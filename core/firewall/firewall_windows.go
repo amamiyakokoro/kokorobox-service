@@ -3,19 +3,26 @@
 package firewall
 
 import (
-	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
-	"time"
-	"unicode/utf16"
 
-	"golang.org/x/sys/windows"
+	"github.com/amamiyakokoro/kokorobox-service/internal/winfirewall"
 )
+
+const coreRuleGroup = "KokoroBox Service Core"
+
+func coreRules(executable string) []winfirewall.Rule {
+	rules := []winfirewall.Rule{
+		winfirewall.Inbound(coreRuleGroup+" TCP", coreRuleGroup, executable, 6, "*"),
+		winfirewall.Inbound(coreRuleGroup+" UDP", coreRuleGroup, executable, 17, "*"),
+	}
+	for i := range rules {
+		rules[i].Description = "Inbound proxy connections to the service-managed KokoroBox core. Mihomo controls LAN access."
+	}
+	return rules
+}
 
 // Ensure receives only the executable resolved by the core manager, never an API-supplied path.
 func Ensure(executable string) error {
@@ -29,38 +36,8 @@ func Ensure(executable string) error {
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("core firewall executable is not a regular file")
 	}
-	systemDirectory, err := windows.GetSystemDirectory()
-	if err != nil {
-		return fmt.Errorf("resolve Windows system directory: %w", err)
-	}
-	units := utf16.Encode([]rune(policyScript))
-	encoded := make([]byte, len(units)*2)
-	for i, unit := range units {
-		encoded[i*2] = byte(unit)
-		encoded[i*2+1] = byte(unit >> 8)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, filepath.Join(systemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
-		"-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", base64.StdEncoding.EncodeToString(encoded))
-	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
-	// Replace rather than append to prevent inherited duplicate values from taking precedence.
-	for _, entry := range os.Environ() {
-		if !strings.EqualFold(strings.SplitN(entry, "=", 2)[0], "KOKOROBOX_CORE_FIREWALL_PATH") {
-			command.Env = append(command.Env, entry)
-		}
-	}
-	command.Env = append(command.Env, "KOKOROBOX_CORE_FIREWALL_PATH="+executable)
-	output, err := command.CombinedOutput()
-	if ctx.Err() != nil {
-		return fmt.Errorf("timed out while configuring core firewall rules")
-	}
-	if err != nil {
-		message := strings.TrimSpace(string(output))
-		if len(message) > 2000 {
-			message = message[:2000]
-		}
-		return fmt.Errorf("configure core firewall rules: %w: %s", err, message)
+	if err := winfirewall.Apply(coreRuleGroup, coreRules(executable), winfirewall.Ensure, false); err != nil {
+		return fmt.Errorf("configure core firewall rules: %w", err)
 	}
 	return nil
 }

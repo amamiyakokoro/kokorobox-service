@@ -4,77 +4,30 @@ package firewall
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/amamiyakokoro/kokorobox-service/internal/winfirewall"
 )
 
-// Run the production policy against an in-memory store with real, unregistered COM rules.
-// No test changes the host firewall, and no elevated test process is required.
-func TestPolicyCreatesUpdatesAndVerifiesStagedCoreRules(t *testing.T) {
-	harness := `
-$ErrorActionPreference = 'Stop'
-$global:testPolicy = [pscustomobject]@{
-  LocalPolicyModifyState = 0
-  Rules = [System.Collections.ArrayList]::new()
-}
-function New-Object {
-  param([string]$ComObject)
-  if ($ComObject -eq 'HNetCfg.FwPolicy2') { return $global:testPolicy }
-  if ($ComObject -ne 'HNetCfg.FWRule') { throw 'Unexpected COM object' }
-  # Validate real COM property setters without adding rules to the host policy.
-  return Microsoft.PowerShell.Utility\New-Object -ComObject HNetCfg.FWRule
-}
-function Assert-Rule($rule, $path) {
- if ($rule.ApplicationName -ine $path -or -not $rule.Enabled -or $rule.Action -ne 1 -or
-     $rule.Direction -ne 1 -or $rule.Profiles -ne 2147483647 -or $rule.EdgeTraversal -or
-     $rule.Grouping -ne 'KokoroBox Service Core') { throw ("Incorrect rule for '$path': " + ($rule | Select-Object ApplicationName,Enabled,Action,Direction,Profiles,EdgeTraversal,Grouping | ConvertTo-Json -Compress)) }
-}
-$policyBody = [IO.File]::ReadAllText($env:KOKOROBOX_TEST_POLICY)
-$run = [scriptblock]::Create($policyBody)
-$env:KOKOROBOX_CORE_FIREWALL_PATH = [IO.Path]::GetFullPath("C:/ProgramData/KokoroBox/core-runtime/oldhash/mihomo.exe")
-& $run
-if ($global:testPolicy.Rules.Count -ne 2) { throw 'Missing protocol rules' }
-foreach ($rule in $global:testPolicy.Rules) { Assert-Rule $rule $env:KOKOROBOX_CORE_FIREWALL_PATH }
-if ($global:testPolicy.Rules[0].Protocol -ne 6 -or $global:testPolicy.Rules[1].Protocol -ne 17) { throw 'Incorrect protocols' }
-& $run
-if ($global:testPolicy.Rules.Count -ne 2) { throw 'Duplicate rules on restart' }
-# A staged hash update must repair both protocols without accumulating rules.
-$env:KOKOROBOX_CORE_FIREWALL_PATH = [IO.Path]::GetFullPath("C:/ProgramData/KokoroBox/core-runtime/new hash's folder/mihomo.exe")
-$global:testPolicy.Rules[0].Enabled = $false
-$global:testPolicy.Rules[0].Action = 0
-& $run
-if ($global:testPolicy.Rules.Count -ne 2) { throw 'Duplicate rules after update' }
-foreach ($rule in $global:testPolicy.Rules) { Assert-Rule $rule $env:KOKOROBOX_CORE_FIREWALL_PATH }
-# Never overwrite unrelated policy or pretend a centrally blocked policy was repaired.
-$global:testPolicy.Rules[0].Grouping = 'Another app'
-$failed = $false
-try { & $run } catch { $failed = $true }
-if (-not $failed) { throw 'Overwrote unrelated firewall rule' }
-$global:testPolicy.LocalPolicyModifyState = 1
-$failed = $false
-try { & $run } catch { $failed = $true }
-if (-not $failed) { throw 'Ignored administrator policy' }
-`
-	dir := t.TempDir()
-	policyPath := filepath.Join(dir, "policy.ps1")
-	if err := os.WriteFile(policyPath, []byte(policyScript), 0600); err != nil {
-		t.Fatal(err)
+func TestPolicyKeepsCoreInboundScope(t *testing.T) {
+	path := "C:/ProgramData/KokoroBox/core-runtime/new hash's folder/mihomo.exe"
+	rules := coreRules(path)
+	if len(rules) != 2 {
+		t.Fatal("expected TCP and UDP rules")
 	}
-	testPath := filepath.Join(dir, "test.ps1")
-	if err := os.WriteFile(testPath, []byte(harness), 0600); err != nil {
-		t.Fatal(err)
-	}
-	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", testPath)
-	command.Env = append(os.Environ(), "KOKOROBOX_TEST_POLICY="+policyPath)
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("policy failed: %v\n%s", err, output)
+	for i, rule := range rules {
+		if rule.Group != "KokoroBox Service Core" || rule.Application != path || rule.Protocol != []int32{6, 17}[i] ||
+			rule.LocalPorts != "*" || rule.RemotePorts != "*" || rule.LocalAddresses != "*" || rule.RemoteAddresses != "*" ||
+			rule.Direction != 1 || rule.Action != 1 || rule.Profiles != winfirewall.AllProfiles || !rule.Enabled || rule.EdgeTraversal || rule.Service != "" {
+			t.Fatalf("unexpected core scope: %+v", rule)
+		}
 	}
 }
 
 func TestEnsureRejectsInvalidExecutableBeforeTouchingFirewall(t *testing.T) {
-	for _, path := range []string{"mihomo.exe", `C:\core\not-an-executable.txt`, "C:\\core\\mihomo.exe\x00other"} {
+	for _, path := range []string{"mihomo.exe", "C:/core/not-an-executable.txt", "C:/core/mihomo.exe" + string(rune(0)) + "other"} {
 		if err := Ensure(path); err == nil {
 			t.Fatalf("accepted invalid path %q", path)
 		}
@@ -85,55 +38,5 @@ func TestEnsureRejectsInvalidExecutableBeforeTouchingFirewall(t *testing.T) {
 	}
 	if err := Ensure(dir); err == nil || !strings.Contains(err.Error(), "regular file") {
 		t.Fatalf("accepted directory: %v", err)
-	}
-}
-
-// Explicitly opt in from an elevated process. Exercise the real Rules.Add COM
-// boundary: property setters alone accept an empty ServiceName, but Add rejects it.
-// Unique, disabled rules never admit traffic and are removed even on failure.
-func TestPolicyAddsRealWindowsRules(t *testing.T) {
-	if os.Getenv("KOKOROBOX_TEST_FIREWALL_INTEGRATION") != "1" {
-		t.Skip("requires elevation and KOKOROBOX_TEST_FIREWALL_INTEGRATION=1")
-	}
-	dir := t.TempDir()
-	policyPath := filepath.Join(dir, "policy.ps1")
-	if err := os.WriteFile(policyPath, []byte(policyScript), 0600); err != nil {
-		t.Fatal(err)
-	}
-	harness := `
-$ErrorActionPreference = 'Stop'
-$prefix = 'KokoroBox Firewall Test ' + [guid]::NewGuid().ToString()
-$body = [IO.File]::ReadAllText($env:KOKOROBOX_TEST_POLICY)
-# Only change test rule identity and enabled state; retain production COM setup.
-$body = $body.Replace('KokoroBox Service Core', $prefix).
-  Replace('$rule.Enabled = $true', '$rule.Enabled = $false').
-  Replace('-not $actual.Enabled', '$actual.Enabled')
-$run = [scriptblock]::Create($body)
-$store = New-Object -ComObject HNetCfg.FwPolicy2
-try {
-  $env:KOKOROBOX_CORE_FIREWALL_PATH = Join-Path $PSHOME 'powershell.exe'
-  & $run
-  & $run
-  # Exercise an actual executable-path update as on a core upgrade.
-  $env:KOKOROBOX_CORE_FIREWALL_PATH = Join-Path $env:SystemRoot 'System32\cmd.exe'
-  & $run
-  $rules = @($store.Rules | Where-Object { $_.Grouping -eq $prefix })
-  if ($rules.Count -ne 2) { throw 'Expected exactly two real firewall rules' }
-  foreach ($rule in $rules) {
-    if ($rule.Enabled -or $rule.ApplicationName -ine $env:KOKOROBOX_CORE_FIREWALL_PATH -or
-        -not [string]::IsNullOrEmpty($rule.ServiceName)) { throw 'Incorrect real firewall rule' }
-  }
-} finally {
-  foreach ($suffix in @(' TCP', ' UDP')) { $store.Rules.Remove($prefix + $suffix) }
-}
-`
-	testPath := filepath.Join(dir, "test.ps1")
-	if err := os.WriteFile(testPath, []byte(harness), 0600); err != nil {
-		t.Fatal(err)
-	}
-	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", testPath)
-	command.Env = append(os.Environ(), "KOKOROBOX_TEST_POLICY="+policyPath)
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("real Windows policy failed: %v\n%s", err, output)
 	}
 }
