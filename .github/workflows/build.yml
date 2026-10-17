@@ -43,6 +43,8 @@ jobs:
           go-version: '1.26'
       - name: Test native firewall policy and staged executable paths
         run: go test ./internal/winfirewall ./core/firewall ./core ./processrouter -run 'TestCOM|TestReconcile|TestCheck|TestFirewall|TestPolicy|TestEnsure|TestCoreFirewall|TestRepairCoreFirewall' -count=1
+      - name: Test system proxy impersonation and recovery record cleanup
+        run: go test ./route/sysproxyapi -run 'TestWindowsSysproxyRequestRunner' -count=1
 
   build:
     needs: [test, test-windows-firewall]

@@ -19,7 +19,25 @@ type windowsTokenSysproxyGuardRunner struct {
 
 type windowsSysproxyGuardRunner struct{}
 
-func captureSysproxyGuardRunner(_ *http.Request) (sysproxyGuardRunner, error) {
+// Capture only the client token while impersonating. Proxy operations use the
+// retained token; lease persistence and cleanup must keep the service identity.
+func captureSysproxyGuardRunner(r *http.Request) (sysproxyGuardRunner, error) {
+	var runner sysproxyGuardRunner
+	err := runSysproxyAsRequestUser(r, func() error {
+		var err error
+		runner, err = captureWindowsSysproxyGuardRunner()
+		return err
+	})
+	if err != nil {
+		if runner != nil {
+			_ = runner.Close()
+		}
+		return nil, err
+	}
+	return runner, nil
+}
+
+func captureWindowsSysproxyGuardRunner() (sysproxyGuardRunner, error) {
 	var threadToken windows.Token
 	err := windows.OpenThreadToken(
 		windows.CurrentThread(),

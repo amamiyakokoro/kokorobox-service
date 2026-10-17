@@ -132,32 +132,30 @@ func pac(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	err := runSysproxyAsRequestUser(r, func() error {
-		return runSysproxyMutation(func() error {
-			runner, err := captureSysproxyGuardRunner(r)
+	err := runSysproxyMutation(func() error {
+		runner, err := captureSysproxyGuardRunner(r)
+		if err != nil {
+			return err
+		}
+		if req.Script != nil {
+			managed, err = startManagedPACServer(*req.Script)
 			if err != nil {
-				return err
-			}
-			if req.Script != nil {
-				managed, err = startManagedPACServer(*req.Script)
-				if err != nil {
-					_ = runner.Close()
-					return err
-				}
-				opts.PACURL = managed.url
-			}
-			if err := sysproxy.SetPac(opts); err != nil {
 				_ = runner.Close()
 				return err
 			}
-			if err := beginManagedProxy(runner, sysproxyGuardModePAC, opts); err != nil {
-				return err
-			}
-			activeSysproxyLease.pacServer = managed
-			StopGuard()
-			configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModePAC, opts)
-			return nil
-		})
+			opts.PACURL = managed.url
+		}
+		if err := runner.Apply(sysproxyGuardModePAC, opts); err != nil {
+			_ = runner.Close()
+			return err
+		}
+		if err := beginManagedProxy(runner, sysproxyGuardModePAC, opts); err != nil {
+			return err
+		}
+		activeSysproxyLease.pacServer = managed
+		StopGuard()
+		configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModePAC, opts)
+		return nil
 	})
 	logSysproxyOperation("set_pac", "PAC settings updated", "Failed to update PAC settings", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
 	if err != nil {
@@ -187,23 +185,21 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	err := runSysproxyAsRequestUser(r, func() error {
-		return runSysproxyMutation(func() error {
-			runner, err := captureSysproxyGuardRunner(r)
-			if err != nil {
-				return err
-			}
-			if err := sysproxy.SetProxy(opts); err != nil {
-				_ = runner.Close()
-				return err
-			}
-			if err := beginManagedProxy(runner, sysproxyGuardModeProxy, opts); err != nil {
-				return err
-			}
-			StopGuard()
-			configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModeProxy, opts)
-			return nil
-		})
+	err := runSysproxyMutation(func() error {
+		runner, err := captureSysproxyGuardRunner(r)
+		if err != nil {
+			return err
+		}
+		if err := runner.Apply(sysproxyGuardModeProxy, opts); err != nil {
+			_ = runner.Close()
+			return err
+		}
+		if err := beginManagedProxy(runner, sysproxyGuardModeProxy, opts); err != nil {
+			return err
+		}
+		StopGuard()
+		configureSysproxyGuardBestEffort(r, req.Guard, sysproxyGuardModeProxy, opts)
+		return nil
 	})
 	logSysproxyOperation("set_proxy", "Proxy settings updated", "Failed to update proxy settings", t, err, append(sysproxyOptionLogFields(opts), "guard", req.Guard)...)
 	if err != nil {
@@ -226,15 +222,15 @@ func disable(w http.ResponseWriter, r *http.Request) {
 		OnlyActiveDevice: req.OnlyActiveDevice,
 		UseRegistry:      req.UseRegistry,
 	})
-	err := runSysproxyAsRequestUser(r, func() error {
-		return runSysproxyMutation(func() error {
-			if err := sysproxy.DisableProxy(opts); err != nil {
-				return err
-			}
-			StopGuard()
-			forgetSysproxyLease()
-			return nil
-		})
+	err := runSysproxyMutation(func() error {
+		if err := runSysproxyAsRequestUser(r, func() error {
+			return sysproxy.DisableProxy(opts)
+		}); err != nil {
+			return err
+		}
+		StopGuard()
+		forgetSysproxyLease()
+		return nil
 	})
 	logSysproxyOperation("disable_proxy", "Proxy disabled", "Failed to disable proxy", t, err, sysproxyOptionLogFields(opts)...)
 	if err != nil {
