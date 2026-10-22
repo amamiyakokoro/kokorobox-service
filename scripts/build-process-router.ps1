@@ -49,14 +49,18 @@ $CoreOutput = Join-Path $Destination "ProxyBridgeCore.dll"
 $CoreImportLibrary = Join-Path $BuildRoot "ProxyBridgeCore.lib"
 $RouterOutput = Join-Path $Destination "kokorobox-process-router.exe"
 
+$CoreVersionResource = Join-Path $BuildRoot "ProxyBridgeCore.res"
+& (Join-Path $WindowsRoot "build-version-resource.ps1") -VcVars $VcVars -OutputPath $CoreVersionResource
+
 $CoreArgs = "/nologo /O2 /GL /Gy /W4 /wd4100 /wd4189 /wd4267 /wd4244 /wd4996 " +
     "/D_CRT_SECURE_NO_WARNINGS /D_WINSOCK_DEPRECATED_NO_WARNINGS /DPROXYBRIDGE_EXPORTS /DNDEBUG " +
-    "/GS /guard:cf /I`"$WinDivertRoot\include`" $Sources /LD /link /LTCG /OPT:REF /OPT:ICF " +
+    "/GS /guard:cf /I`"$WinDivertRoot\include`" $Sources `"$CoreVersionResource`" /LD /link /LTCG /OPT:REF /OPT:ICF " +
     "/RELEASE /DYNAMICBASE /HIGHENTROPYVA /NXCOMPAT /guard:cf /LIBPATH:`"$WinDivertRoot\x64`" " +
     "WinDivert.lib ws2_32.lib iphlpapi.lib /IMPLIB:`"$CoreImportLibrary`" /OUT:`"$CoreOutput`""
 $CoreCommand = "`"$VcVars`" x64 >nul && cd /d `"$WindowsRoot`" && cl.exe $CoreArgs"
 cmd /c $CoreCommand
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $CoreOutput)) { throw "ProxyBridge core build failed" }
+& (Join-Path $WindowsRoot "test-version-info.ps1") -DllPath $CoreOutput
 
 $RouterArgs = "/nologo /O2 /GL /Gy /W4 /wd4100 /wd4189 /wd4267 /wd4244 /wd4996 " +
     "/D_WINSOCK_DEPRECATED_NO_WARNINGS /D_WIN32_WINNT=0x0601 /DNDEBUG /GS /guard:cf " +
