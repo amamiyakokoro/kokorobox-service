@@ -135,6 +135,10 @@ func registerService(install func(kservice.Service) error) (kservice.Service, er
 	if err := install(s); err != nil {
 		return nil, outputServiceCommandError("install", "Failed to install service", err)
 	}
+	if err := configureInstalledServiceRecovery(); err != nil {
+		err = errors.Join(err, s.Uninstall())
+		return nil, outputServiceCommandError("install", "Failed to install service", err)
+	}
 	return s, nil
 }
 

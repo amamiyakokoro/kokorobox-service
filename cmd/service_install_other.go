@@ -11,3 +11,7 @@ func prepareServiceInstallExecutable(source string) (string, error) {
 func installServiceRegistration(s kservice.Service) error {
 	return s.Install()
 }
+
+func configureInstalledServiceRecovery() error {
+	return nil
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/amamiyakokoro/kokorobox-service/processrouter"
 	kservice "github.com/kardianos/service"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 const serviceInstallDirectoryName = "KokoroBox Service"
@@ -190,6 +191,31 @@ func installServiceRegistration(s kservice.Service) error {
 	}
 	if err := s.Install(); err != nil {
 		return fmt.Errorf("register protected service executable: %w", err)
+	}
+	return nil
+}
+
+func configureInstalledServiceRecovery() error {
+	manager, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("connect to Service Control Manager: %w", err)
+	}
+	defer manager.Disconnect()
+
+	service, err := manager.OpenService(identity.ServiceName)
+	if err != nil {
+		return fmt.Errorf("open service to configure recovery: %w", err)
+	}
+	defer service.Close()
+
+	// SCM repeats its last action, so end with NoAction to bound crash retries.
+	actions := []mgr.RecoveryAction{
+		{Type: mgr.ServiceRestart, Delay: time.Second},
+		{Type: mgr.ServiceRestart, Delay: 5 * time.Second},
+		{Type: mgr.NoAction},
+	}
+	if err := service.SetRecoveryActions(actions, uint32((24*time.Hour)/time.Second)); err != nil {
+		return fmt.Errorf("configure service recovery actions: %w", err)
 	}
 	return nil
 }
