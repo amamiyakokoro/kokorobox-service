@@ -31,6 +31,11 @@ kokorobox-service service restart
 kokorobox-service service uninstall
 ```
 
+On Windows, `service init --public-key KEY --authorized-sid SID` can register and start a missing
+service in the same elevated command. The SID identifies the user that will connect to the
+service. That user can use application routing from a standard account. Access to the
+service-managed Windows core requires an administrator account.
+
 On macOS, Desktop registers the daemon through `SMAppService`. Run `kokorobox-service --help` for other commands and options.
 
 ## Development

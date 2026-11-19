@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/amamiyakokoro/kokorobox-service/i18n"
@@ -102,33 +103,39 @@ var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: i18n.DefaultText("Install KokoroBox Service"),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		listenAddr := listen
-		if listenAddr == "" {
-			listenAddr = defaultAddr
-		}
-		executable, err := os.Executable()
+		s, err := registerService(installServiceRegistration)
 		if err != nil {
-			return outputServiceCommandError("install", "Failed to resolve service executable", err)
-		}
-		executable, err = prepareServiceInstallExecutable(executable)
-		if err != nil {
-			return outputServiceCommandError("install", "Failed to prepare service executable", err)
-		}
-
-		prg := &Program{listen: listenAddr}
-		s, err := appservice.New(prg, executable)
-		if err != nil {
-			return outputServiceCommandError("install", "Failed to create service", err)
-		}
-
-		if err := installServiceRegistration(s); err != nil {
-			return outputServiceCommandError("install", "Failed to install service", err)
+			return err
 		}
 		if err := s.Start(); err != nil {
 			return outputServiceCommandError("install", "Failed to start service", err)
 		}
 		return outputServiceCommandResult("Service installed successfully", serviceCommandStatus{Action: "install", State: "running"})
 	},
+}
+
+func registerService(install func(kservice.Service) error) (kservice.Service, error) {
+	listenAddr := listen
+	if listenAddr == "" {
+		listenAddr = defaultAddr
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return nil, outputServiceCommandError("install", "Failed to resolve service executable", err)
+	}
+	executable, err = prepareServiceInstallExecutable(executable)
+	if err != nil {
+		return nil, outputServiceCommandError("install", "Failed to prepare service executable", err)
+	}
+
+	s, err := appservice.New(&Program{listen: listenAddr}, executable)
+	if err != nil {
+		return nil, outputServiceCommandError("install", "Failed to create service", err)
+	}
+	if err := install(s); err != nil {
+		return nil, outputServiceCommandError("install", "Failed to install service", err)
+	}
+	return s, nil
 }
 
 var serviceUninstallCmd = &cobra.Command{
@@ -269,6 +276,22 @@ var serviceInitCmd = &cobra.Command{
 		if authorizedSID == "" && !cmd.Flags().Changed("authorized-uid") {
 			return outputServiceCommandError("init", "Error: an authorized user identity must be bound with --authorized-sid or --authorized-uid", errors.New("An authorized user identity must be bound with --authorized-sid or --authorized-uid"))
 		}
+
+		controller := appservice.Controller{}
+		if runtime.GOOS == "windows" && authorizedSID != "" {
+			if installIfMissing, _ := cmd.Flags().GetBool("install-if-missing"); installIfMissing {
+				// Start a new registration only after the requesting user's SID and key are on disk.
+				if _, err := controller.Status(); errors.Is(err, kservice.ErrNotInstalled) {
+					if _, err := registerService(kservice.Service.Install); err != nil {
+						return err
+					}
+				} else if err != nil {
+					return outputServiceCommandError("status", "Failed to query service status", err)
+				}
+				ensureRunning = true
+			}
+		}
+
 		dataDir, err := route.GetServiceDataDir()
 		if err != nil {
 			return outputServiceCommandError("init", "Failed to prepare service data directory", err)
@@ -304,7 +327,6 @@ var serviceInitCmd = &cobra.Command{
 			_ = outputServiceCommandResult("Service initialized; authentication configuration unchanged", serviceCommandStatus{Action: "init"})
 		}
 
-		controller := appservice.Controller{}
 		status, err := controller.Status()
 		if err != nil {
 			return outputServiceCommandError("status", "Failed to query service status; if the service is running, run 'restart' manually", err)
@@ -348,4 +370,7 @@ func init() {
 	serviceInitCmd.Flags().String("authorized-sid", "", i18n.DefaultText("Windows SID allowed to access the service"))
 	serviceInitCmd.Flags().Uint32("authorized-uid", 0, i18n.DefaultText("Unix UID allowed to access the service"))
 	serviceInitCmd.Flags().Bool("ensure-running", false, i18n.DefaultText("Start the service after initialization when it is not running"))
+	if runtime.GOOS == "windows" {
+		serviceInitCmd.Flags().Bool("install-if-missing", true, i18n.DefaultText("Install and start a missing Windows service during initialization"))
+	}
 }

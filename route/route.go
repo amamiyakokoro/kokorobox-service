@@ -38,7 +38,7 @@ func router(bootstrapSocketPath string) *chi.Mux {
 		r.Mount("/service", serviceapi.Router())
 		r.Mount("/sysproxy", sysproxyapi.Router())
 		r.Mount("/network/dns", dnsapi.Router())
-		r.Mount("/core", coreapi.Router())
+		r.Mount("/core", auth.RequireWindowsCoreAdministrator(coreapi.Router()))
 		r.Mount("/process-router", processrouterapi.Router())
 		r.Mount("/sys", sysapi.Router())
 	})
